@@ -6,6 +6,9 @@ const isPublicRoute = createRouteMatcher([
 
   // allow curl testing for CSV upload
   "/api/orgs/(.*)/batches/(.*)/upload-csv",
+
+  // Stripe webhook must be public
+  "/api/webhooks/stripe",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
