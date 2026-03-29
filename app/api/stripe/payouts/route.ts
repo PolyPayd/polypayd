@@ -131,6 +131,7 @@ export async function POST(req: Request) {
         {
           amount: amountMinor,
           currency: "gbp",
+          method: "instant",
           metadata: {
             clerk_user_id: userId,
             idempotency_key: idempotencyKey,
