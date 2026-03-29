@@ -148,7 +148,7 @@ begin
   end if;
 
   v_calculated_fee := round(v_pending_amount * c_platform_fee_bps / 10000.0, 2);
-  v_platform_fee := greatest(v_calculated_fee, v_min_platform_fee);
+  v_platform_fee := v_calculated_fee;
   v_total_debit := v_pending_amount + v_platform_fee;
   v_impact_amount := round(v_platform_fee * 0.01, 2);
 
@@ -384,7 +384,7 @@ begin
   end if;
 
   v_calculated_fee := round(v_alloc_total * c_platform_fee_bps / 10000.0, 2);
-  v_platform_fee := greatest(v_calculated_fee, v_min_platform_fee);
+  v_platform_fee := v_calculated_fee;
   v_total_debit := v_alloc_total + v_platform_fee;
   v_impact_amount := round(v_platform_fee * 0.01, 2);
 
@@ -546,10 +546,7 @@ begin
 
   select coalesce(round(sum(
     (amount)::numeric(18,2)
-    + greatest(
-        round((amount)::numeric(18,2) * c_platform_fee_bps / 10000.0, 2),
-        v_min_platform_fee
-      )
+    + round((amount)::numeric(18,2) * c_platform_fee_bps / 10000.0, 2)
   ), 2), 0)
   into v_required_with_fees
   from batch_items
@@ -652,7 +649,7 @@ begin
       v_success_amount := v_success_amount + v_item.amt;
 
       v_line_calculated_fee := round(v_item.amt * c_platform_fee_bps / 10000.0, 2);
-      v_line_fee := greatest(v_line_calculated_fee, v_min_platform_fee);
+      v_line_fee := v_line_calculated_fee;
       v_line_total := v_item.amt + v_line_fee;
 
       v_idempotency_key := 'standard-batch-item-payout-' || v_item.id::text;

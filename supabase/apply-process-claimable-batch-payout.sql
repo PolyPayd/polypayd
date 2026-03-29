@@ -92,7 +92,7 @@ begin
   end if;
 
   v_calculated_fee := round(v_alloc_total * c_platform_fee_bps / 10000.0, 2);
-  v_platform_fee := greatest(v_calculated_fee, v_min_platform_fee);
+  v_platform_fee := v_calculated_fee;
   v_total_debit := v_alloc_total + v_platform_fee;
   v_impact_amount := round(v_platform_fee * 0.01, 2);
 
