@@ -3,13 +3,14 @@ import type Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getStripeServerClient } from "@/lib/stripe";
 import { applyStripeWalletTopupFromPaymentIntent } from "@/lib/stripeWalletTopupApply";
+import { applyStripeBalanceAvailableFromEvent } from "@/lib/stripeBalanceAvailableApply";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Stripe webhook endpoint for wallet funding.
- * Verifies signature and applies credit idempotently in Supabase.
+ * Stripe webhook: wallet top-ups (`payment_intent.succeeded`) and pending→available release (`balance.available`).
+ * Verifies signature; applies changes idempotently in Supabase.
  */
 export async function POST(req: Request) {
   try {
@@ -37,32 +38,45 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
 
-    // Ignore all other event types gracefully.
-    if (event.type !== "payment_intent.succeeded") {
-      return NextResponse.json({ received: true, ignored: true }, { status: 200 });
-    }
-
-    const paymentIntent = event.data.object as Stripe.PaymentIntent;
     const supabase = supabaseAdmin();
 
-    const { data, error } = await applyStripeWalletTopupFromPaymentIntent(
-      supabase,
-      paymentIntent,
-      event.id,
-      event.type,
-      event.livemode
-    );
+    if (event.type === "payment_intent.succeeded") {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      const { data, error } = await applyStripeWalletTopupFromPaymentIntent(
+        supabase,
+        paymentIntent,
+        event.id,
+        event.type,
+        event.livemode
+      );
 
-    if (error) {
-      console.error("SUPABASE RPC ERROR apply_stripe_wallet_topup:", {
-        error,
-        eventId: event.id,
-        paymentIntentId: paymentIntent.id,
-      });
-      return NextResponse.json({ error: error.message }, { status: error.status });
+      if (error) {
+        console.error("SUPABASE RPC ERROR apply_stripe_wallet_topup:", {
+          error,
+          eventId: event.id,
+          paymentIntentId: paymentIntent.id,
+        });
+        return NextResponse.json({ error: error.message }, { status: error.status });
+      }
+
+      return NextResponse.json({ received: true, result: data }, { status: 200 });
     }
 
-    return NextResponse.json({ received: true, result: data }, { status: 200 });
+    if (event.type === "balance.available") {
+      const { data, error } = await applyStripeBalanceAvailableFromEvent(supabase, event as Stripe.BalanceAvailableEvent);
+
+      if (error) {
+        console.error("SUPABASE RPC ERROR apply_stripe_balance_available_release:", {
+          error,
+          eventId: event.id,
+        });
+        return NextResponse.json({ error: error.message }, { status: error.status });
+      }
+
+      return NextResponse.json({ received: true, result: data }, { status: 200 });
+    }
+
+    return NextResponse.json({ received: true, ignored: true }, { status: 200 });
   } catch (error) {
     console.error("Unhandled Stripe webhook error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

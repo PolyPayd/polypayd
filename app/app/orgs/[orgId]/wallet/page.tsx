@@ -20,6 +20,7 @@ function mapLedgerReferenceType(refType: string) {
   if (refType === "batch_run") return "Bulk Send";
   if (refType === "batch_payout") return "Claim Link Payout";
   if (refType === "wallet_funding") return "Top-up";
+  if (refType === "wallet_funding_release") return "Funds available";
   return refType;
 }
 
