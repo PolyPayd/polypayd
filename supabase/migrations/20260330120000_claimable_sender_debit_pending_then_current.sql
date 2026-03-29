@@ -1,26 +1,7 @@
--- Create the process_claimable_batch_payout RPC used by Send payouts.
--- Run this in Supabase SQL Editor if you get "Could not find the function public.process_claimable_batch_payout(p_batch_id) in the schema cache".
--- Requires: batches, batch_claims, wallets (with pending_balance), ledger_transactions, ledger_entries, payouts.
--- Impact: run supabase/apply-impact-pool.sql first. Fee: 150 bps (no £1 minimum in current migrations).
--- Prefer migrations in order: 20260330100000_wallet_topup_pending_balance.sql,
---   20260330110000_batch_payouts_pending_balance.sql, 20260330120000_claimable_sender_debit_pending_then_current.sql.
+-- Claim Link payout: debit sender from pending_balance first, then current_balance.
+-- Fixes production where funds may live in one bucket while an older RPC only read the other,
+-- and aligns with top-ups (pending) plus any legacy/current_balance-only balance.
 
--- Payouts table (required by the function; create if missing)
-create table if not exists payouts (
-  id uuid primary key default gen_random_uuid(),
-  batch_id uuid not null,
-  recipient_user_id text not null,
-  wallet_id uuid references wallets(id),
-  amount numeric(18,2) not null,
-  status text not null default 'pending',
-  processed_at timestamptz null,
-  created_at timestamptz not null default now()
-);
-create index if not exists payouts_batch_id_idx on payouts (batch_id);
-create index if not exists payouts_recipient_user_id_idx on payouts (recipient_user_id);
-
-
--- Matches migration 20260330120000_claimable_sender_debit_pending_then_current.sql (sender: pending then current; recipients: pending).
 create or replace function public.process_claimable_batch_payout(p_batch_id uuid)
 returns jsonb
 language plpgsql

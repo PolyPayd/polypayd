@@ -6,16 +6,6 @@ import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { impactAmountFromPlatformFee } from "@/lib/impact";
 
-function randomFailureReason(): string {
-  const reasons = [
-    "BANK_REJECTED",
-    "ACCOUNT_INVALID",
-    "INSUFFICIENT_FUNDS",
-    "NETWORK_ERROR",
-  ];
-  return reasons[Math.floor(Math.random() * reasons.length)];
-}
-
 export async function approveBatch(batchId: string, orgId: string) {
   const supabase = supabaseAdmin();
 
@@ -647,170 +637,54 @@ export async function sendClaimablePayouts(
   const hasInvalid = claimList.some((c) => Number(c.claim_amount ?? 0) < 0);
   if (hasInvalid) return { error: "All claim amounts must be zero or positive." };
 
-  if (batch.funded_by_user_id) {
-    // RPC does everything in one transaction (ledger, wallets, batch_claims, batch status).
-    // Do not set status to "processing" here; that left batches stuck when the RPC was missing.
-    const { error: startedAuditErr } = await supabase.from("audit_events").insert({
-      org_id: oid,
-      batch_id: bid,
-      actor_user_id: userId,
-      event_type: "claimable_payouts_started",
-      event_data: { recipient_count: claimList.length },
-    });
-    if (startedAuditErr) console.error("Audit claimable_payouts_started failed:", startedAuditErr);
-
-    const { data: rpcData, error: rpcErr } = await supabase.rpc("process_claimable_batch_payout", {
-      p_batch_id: bid,
-    });
-    if (rpcErr) return { error: rpcErr.message };
-    const result = rpcData as {
-      ok?: boolean;
-      error?: string;
-      platform_fee?: number;
-      impact_amount?: number;
-      fee_bps?: number;
-    } | null;
-    const platformFee = Number(result?.platform_fee ?? 0);
-    const impactRaw = result?.impact_amount;
-    const impactContribution =
-      impactRaw != null && Number(impactRaw) >= 0
-        ? Number(impactRaw)
-        : impactAmountFromPlatformFee(result?.platform_fee);
-    if (result && result.ok === false) {
-      if (result.error?.toLowerCase().includes("duplicate") && result.error?.toLowerCase().includes("idempotency")) {
-        await supabase.from("batches").update({ status: "completed" }).eq("id", bid).eq("org_id", oid);
-        revalidatePath(`/app/batches/${bid}`);
-        return { success: true };
-      }
-      return { error: result.error ?? "Payout failed" };
-    }
-    revalidatePath(`/app/batches/${bid}`);
+  const funder = (batch.funded_by_user_id ?? "").toString().trim();
+  if (!funder) {
     return {
-      success: true,
-      impactContribution,
-      platformFee,
-      feeBps: result?.fee_bps,
+      error:
+        "This batch has no funder on record, so payouts cannot move wallet balances. Contact support with the batch ID.",
     };
   }
 
-  const { error: processingErr } = await supabase
-    .from("batches")
-    .update({ status: "processing" })
-    .eq("id", bid)
-    .eq("org_id", oid);
-  if (processingErr) return { error: processingErr.message };
-
-  const { error: startedAuditErrSim } = await supabase.from("audit_events").insert({
+  // RPC does everything in one transaction (ledger, wallets, batch_claims, batch status).
+  const { error: startedAuditErr } = await supabase.from("audit_events").insert({
     org_id: oid,
     batch_id: bid,
     actor_user_id: userId,
     event_type: "claimable_payouts_started",
     event_data: { recipient_count: claimList.length },
   });
-  if (startedAuditErrSim) console.error("Audit claimable_payouts_started failed:", startedAuditErrSim);
+  if (startedAuditErr) console.error("Audit claimable_payouts_started failed:", startedAuditErr);
 
-  let successCount = 0;
-  let failedCount = 0;
-  const now = new Date().toISOString();
-
-  for (const claim of claimList) {
-    const claimId = claim.id;
-    if (claimId == null) continue;
-
-    const claimAmount = Number(claim.claim_amount ?? 0);
-    const simulatedSuccess = Math.random() >= 0.2;
-
-    if (simulatedSuccess) {
-      const { error: upErr } = await supabase
-        .from("batch_claims")
-        .update({
-          payout_status: "paid",
-          paid_at: now,
-          failure_reason: null,
-        })
-        .eq("id", claimId)
-        .eq("batch_id", bid);
-
-      if (upErr) {
-        const { error: failErr } = await supabase
-          .from("batch_claims")
-          .update({
-            payout_status: "failed",
-            paid_at: null,
-            failure_reason: upErr.message ?? "Update failed",
-          })
-          .eq("id", claimId)
-          .eq("batch_id", bid);
-        if (failErr) console.error("Failed to mark claim as failed:", failErr);
-        failedCount += 1;
-        const { error: auditErr } = await supabase.from("audit_events").insert({
-          org_id: oid,
-          batch_id: bid,
-          actor_user_id: userId,
-          event_type: "claimable_payout_failed",
-          event_data: { claim_id: claimId, failure_reason: upErr.message },
-        });
-        if (auditErr) console.error("Audit claimable_payout_failed failed:", auditErr);
-      } else {
-        successCount += 1;
-        const { error: auditErr } = await supabase.from("audit_events").insert({
-          org_id: oid,
-          batch_id: bid,
-          actor_user_id: userId,
-          event_type: "claimable_payout_paid",
-          event_data: { claim_id: claimId },
-        });
-        if (auditErr) console.error("Audit claimable_payout_paid failed:", auditErr);
-      }
-    } else {
-      const reason = randomFailureReason();
-      const { error: upErr } = await supabase
-        .from("batch_claims")
-        .update({
-          payout_status: "failed",
-          paid_at: null,
-          failure_reason: reason,
-        })
-        .eq("id", claimId)
-        .eq("batch_id", bid);
-
-      failedCount += 1;
-      if (upErr) {
-        console.error("Failed to update claim payout_status:", upErr);
-      } else {
-        const { error: auditErr } = await supabase.from("audit_events").insert({
-          org_id: oid,
-          batch_id: bid,
-          actor_user_id: userId,
-          event_type: "claimable_payout_failed",
-          event_data: { claim_id: claimId, failure_reason: reason },
-        });
-        if (auditErr) console.error("Audit claimable_payout_failed failed:", auditErr);
-      }
-    }
-  }
-
-  const batchStatus = failedCount > 0 ? "completed_with_errors" : "completed";
-  const { error: batchUpdateErr } = await supabase
-    .from("batches")
-    .update({ status: batchStatus })
-    .eq("id", bid)
-    .eq("org_id", oid);
-  if (batchUpdateErr) return { error: batchUpdateErr.message };
-
-  const { error: completedAuditErr } = await supabase.from("audit_events").insert({
-    org_id: oid,
-    batch_id: bid,
-    actor_user_id: userId,
-    event_type: "claimable_payouts_completed",
-    event_data: {
-      success_count: successCount,
-      failed_count: failedCount,
-      final_status: batchStatus,
-    },
+  const { data: rpcData, error: rpcErr } = await supabase.rpc("process_claimable_batch_payout", {
+    p_batch_id: bid,
   });
-  if (completedAuditErr) console.error("Audit claimable_payouts_completed failed:", completedAuditErr);
-
+  if (rpcErr) return { error: rpcErr.message };
+  const result = rpcData as {
+    ok?: boolean;
+    error?: string;
+    platform_fee?: number;
+    impact_amount?: number;
+    fee_bps?: number;
+  } | null;
+  const platformFee = Number(result?.platform_fee ?? 0);
+  const impactRaw = result?.impact_amount;
+  const impactContribution =
+    impactRaw != null && Number(impactRaw) >= 0
+      ? Number(impactRaw)
+      : impactAmountFromPlatformFee(result?.platform_fee);
+  if (result && result.ok === false) {
+    if (result.error?.toLowerCase().includes("duplicate") && result.error?.toLowerCase().includes("idempotency")) {
+      await supabase.from("batches").update({ status: "completed" }).eq("id", bid).eq("org_id", oid);
+      revalidatePath(`/app/batches/${bid}`);
+      return { success: true };
+    }
+    return { error: result.error ?? "Payout failed" };
+  }
   revalidatePath(`/app/batches/${bid}`);
-  return { success: true };
+  return {
+    success: true,
+    impactContribution,
+    platformFee,
+    feeBps: result?.fee_bps,
+  };
 }

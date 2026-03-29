@@ -49,7 +49,26 @@ function CheckoutForm({ orgId, onSuccess }: CheckoutFormProps) {
         return;
       }
 
-      // Stripe may redirect for some payment methods; if not, we still show success state.
+      // Localhost: Stripe cannot deliver webhooks here; sync the same RPC the webhook uses (idempotent).
+      const pi = (result as { paymentIntent?: { id?: string; status?: string } }).paymentIntent;
+      if (pi?.status === "succeeded" && pi.id) {
+        const syncRes = await fetch("/api/wallet/topups/sync-payment-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ paymentIntentId: pi.id }),
+        });
+        const syncJson = (await syncRes.json()) as { error?: string };
+        if (!syncRes.ok) {
+          setError(
+            syncJson.error ??
+              "Payment succeeded but the wallet did not update. Check the server log, Supabase migration apply_stripe_wallet_topup, or use Stripe CLI to forward webhooks."
+          );
+          return;
+        }
+      }
+
+      // Stripe may redirect for some payment methods; return_url flow is handled by WalletTopUpReturnHandler.
       onSuccess();
     } finally {
       setLoading(false);
@@ -98,6 +117,7 @@ export function AddFundsButton({ orgId }: Props) {
       const res = await fetch("/api/wallet/topups/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           orgId,
           amountGbp: num,
@@ -153,7 +173,7 @@ export function AddFundsButton({ orgId }: Props) {
                 </div>
                 {error && <p className="text-sm text-red-400">{error}</p>}
                 <p className="text-xs text-neutral-500">
-                  Your wallet balance is updated by webhook only after Stripe confirms payment.
+                  After payment, your wallet updates automatically (sync on success, or Stripe webhook in production).
                 </p>
                 <div className="flex gap-2 justify-end pt-2">
                   <button

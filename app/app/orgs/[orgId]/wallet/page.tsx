@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { auth } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { ensureWalletForUser } from "@/lib/wallet";
 import { AddFundsButton } from "./AddFundsButton";
+import { WalletTopUpReturnHandler } from "./WalletTopUpReturnHandler";
 import { ImpactWalletCard } from "@/components/impact/ImpactWalletCard";
 import { fetchUserImpactContributionTotal } from "@/lib/impact";
 
@@ -17,6 +19,7 @@ function money(amount: number, currency = "GBP") {
 function mapLedgerReferenceType(refType: string) {
   if (refType === "batch_run") return "Bulk Send";
   if (refType === "batch_payout") return "Claim Link Payout";
+  if (refType === "wallet_funding") return "Top-up";
   return refType;
 }
 
@@ -110,6 +113,10 @@ export default async function WalletPage({
         >
           ← Back to payouts
         </Link>
+
+        <Suspense fallback={null}>
+          <WalletTopUpReturnHandler />
+        </Suspense>
 
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <h1 className="text-2xl font-semibold text-white">Wallet</h1>
