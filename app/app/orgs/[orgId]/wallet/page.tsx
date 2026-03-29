@@ -92,7 +92,8 @@ export default async function WalletPage({
     }
   }
 
-  const balance = wallet.current_balance;
+  const available = wallet.current_balance;
+  const pending = wallet.pending_balance;
 
   const { total: userImpactTotal, schemaReady: impactSchemaReady } = await fetchUserImpactContributionTotal(
     supabase,
@@ -117,8 +118,10 @@ export default async function WalletPage({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
-            <div className="text-sm text-neutral-500 mb-1">Current balance</div>
-            <div className="text-2xl font-semibold text-white">{money(balance, currency)}</div>
+            <div className="text-sm text-neutral-500 mb-1">Available</div>
+            <div className="text-2xl font-semibold text-white">{money(available, currency)}</div>
+            <div className="text-sm text-neutral-500 mt-3 mb-1">Pending</div>
+            <div className="text-xl font-semibold text-neutral-200">{money(pending, currency)}</div>
           </div>
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
             <div className="text-sm text-neutral-500 mb-1">Currency</div>

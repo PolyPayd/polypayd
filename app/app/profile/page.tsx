@@ -28,7 +28,7 @@ export default async function ProfilePage() {
 
   const { data: wallet } = await supabase
     .from("wallets")
-    .select("current_balance, currency")
+    .select("current_balance, pending_balance, currency")
     .eq("user_id", userId)
     .eq("currency", "GBP")
     .maybeSingle();
@@ -77,8 +77,10 @@ export default async function ProfilePage() {
         <h2 className="text-sm font-medium text-neutral-400">Wallet Snapshot</h2>
         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
           <div>
-            <div className="text-xs text-neutral-500">Current balance</div>
+            <div className="text-xs text-neutral-500">Available</div>
             <div className="text-lg font-semibold text-white">{moneyGBP(wallet?.current_balance ?? 0)}</div>
+            <div className="text-xs text-neutral-500 mt-2">Pending</div>
+            <div className="text-sm font-semibold text-neutral-200">{moneyGBP(wallet?.pending_balance ?? 0)}</div>
           </div>
           <div>
             <div className="text-xs text-neutral-500">Total sent</div>

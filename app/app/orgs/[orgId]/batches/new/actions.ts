@@ -69,10 +69,11 @@ export async function createBatch(formData: FormData) {
     const curr = currency || "GBP";
     const { data: walletRow } = await supabase
       .from("wallets")
-      .select("current_balance")
+      .select("current_balance, pending_balance")
       .eq("user_id", userId)
       .eq("currency", curr)
       .maybeSingle();
+    // Spendable funds for batches: current_balance only (pending settles separately).
     const walletBalance = walletRow ? Number(walletRow.current_balance ?? 0) : 0;
     if (totalPoolAmount > walletBalance) {
       const fmt = (n: number) => new Intl.NumberFormat("en-GB", { style: "currency", currency: curr }).format(n);
