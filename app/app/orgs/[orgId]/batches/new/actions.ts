@@ -73,12 +73,12 @@ export async function createBatch(formData: FormData) {
       .eq("user_id", userId)
       .eq("currency", curr)
       .maybeSingle();
-    // Spendable funds for batches: current_balance only (pending settles separately).
-    const walletBalance = walletRow ? Number(walletRow.current_balance ?? 0) : 0;
+    // Claim Link sends debit pending_balance in DB; pool must fit pending funds.
+    const walletBalance = walletRow ? Number(walletRow.pending_balance ?? 0) : 0;
     if (totalPoolAmount > walletBalance) {
       const fmt = (n: number) => new Intl.NumberFormat("en-GB", { style: "currency", currency: curr }).format(n);
       throw new Error(
-        `Insufficient wallet balance. Available balance is ${fmt(walletBalance)} but batch total is ${fmt(totalPoolAmount)}. Add funds or reduce the amount.`
+        `Insufficient pending balance. Pending balance is ${fmt(walletBalance)} but batch total is ${fmt(totalPoolAmount)}. Add funds or reduce the amount.`
       );
     }
 

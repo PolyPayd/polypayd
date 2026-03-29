@@ -22,7 +22,7 @@ export default async function NewBatchPage({ params }: { params: Params }) {
   let walletBalance = 0;
   if (userId) {
     const wallet = await ensureWalletForUser(supabaseAdmin(), userId, currency);
-    if (wallet) walletBalance = wallet.current_balance;
+    if (wallet) walletBalance = wallet.pending_balance;
   }
 
   return (

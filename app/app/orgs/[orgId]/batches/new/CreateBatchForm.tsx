@@ -150,7 +150,7 @@ export function CreateBatchForm({ orgId, createBatch, walletBalance, currency }:
               Total amount to distribute
             </label>
             <p className="mb-1 text-xs text-neutral-400">
-              Available balance: {formatMoney(walletBalance, currency)}
+              Pending balance: {formatMoney(walletBalance, currency)}
             </p>
             <input
               id="totalPoolAmount"
@@ -166,7 +166,7 @@ export function CreateBatchForm({ orgId, createBatch, walletBalance, currency }:
             />
             {exceedsBalance && (
               <p className="mt-1 text-sm text-red-400">
-                Insufficient wallet balance. Available balance is {formatMoney(walletBalance, currency)} but batch total is {formatMoney(totalNum, currency)}. Add funds or reduce the amount.
+                Insufficient pending balance. Pending balance is {formatMoney(walletBalance, currency)} but batch total is {formatMoney(totalNum, currency)}. Add funds or reduce the amount.
               </p>
             )}
           </div>
