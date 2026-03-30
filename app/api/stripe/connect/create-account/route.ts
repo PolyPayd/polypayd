@@ -1,8 +1,12 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getStripeServerClient } from "@/lib/stripe";
 import { getStripeConnectRedirectUrls } from "@/lib/stripeConnectServer";
+import {
+  getStripeConnectTestCreatePrefill,
+  isStripeSecretKeyTestMode,
+} from "@/lib/stripeConnectTestPrefill";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +42,14 @@ export async function POST(req: Request) {
     if (existing?.stripe_account_id) {
       stripeAccountId = existing.stripe_account_id;
     } else {
+      const useTestPrefill = isStripeSecretKeyTestMode(process.env.STRIPE_SECRET_KEY);
+      let testIndividualEmail: string | null | undefined;
+      if (useTestPrefill) {
+        const u = await currentUser();
+        testIndividualEmail =
+          u?.primaryEmailAddress?.emailAddress ?? u?.emailAddresses?.[0]?.emailAddress ?? null;
+      }
+
       const account = await stripe.accounts.create({
         type: "express",
         country: "GB",
@@ -47,6 +59,9 @@ export async function POST(req: Request) {
           transfers: { requested: true },
         },
         metadata: { clerk_user_id: userId },
+        ...(useTestPrefill
+          ? getStripeConnectTestCreatePrefill({ individualEmail: testIndividualEmail })
+          : {}),
       });
 
       stripeAccountId = account.id;

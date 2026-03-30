@@ -13,7 +13,8 @@ function formatMoney(amount: number, currency = "GBP") {
 type CreateBatchFormProps = {
   orgId: string;
   createBatch: (formData: FormData) => Promise<void>;
-  walletBalance: number;
+  /** pending_balance + current_balance (matches Claim Link send funding rules). */
+  spendableBalance: number;
   currency: string;
 };
 
@@ -23,7 +24,7 @@ function isRedirectError(err: unknown): boolean {
   return typeof digest === "string" && digest.includes("NEXT_REDIRECT");
 }
 
-export function CreateBatchForm({ orgId, createBatch, walletBalance, currency }: CreateBatchFormProps) {
+export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency }: CreateBatchFormProps) {
   const [batchType, setBatchType] = useState<"standard" | "claimable">("standard");
   const [claimableTotalPool, setClaimableTotalPool] = useState("");
   const [claimableMaxRecipients, setClaimableMaxRecipients] = useState("");
@@ -37,7 +38,7 @@ export function CreateBatchForm({ orgId, createBatch, walletBalance, currency }:
   const totalCents = Math.round(totalNum * 100);
   const evenSplitValid =
     maxRecipientsValid && totalNum > 0 && totalCents % maxNum === 0 && perRecipient > 0;
-  const exceedsBalance = batchType === "claimable" && totalNum > walletBalance;
+  const exceedsBalance = batchType === "claimable" && totalNum > spendableBalance;
   const canSubmitClaimable =
     batchType !== "claimable" || (maxRecipientsValid && !exceedsBalance && evenSplitValid);
 
@@ -150,7 +151,7 @@ export function CreateBatchForm({ orgId, createBatch, walletBalance, currency }:
               Total amount to distribute
             </label>
             <p className="mb-1 text-xs text-neutral-400">
-              Pending balance: {formatMoney(walletBalance, currency)}
+              Spendable for this pool: {formatMoney(spendableBalance, currency)} (pending + available)
             </p>
             <input
               id="totalPoolAmount"
@@ -166,7 +167,7 @@ export function CreateBatchForm({ orgId, createBatch, walletBalance, currency }:
             />
             {exceedsBalance && (
               <p className="mt-1 text-sm text-red-400">
-                Insufficient pending balance. Pending balance is {formatMoney(walletBalance, currency)} but batch total is {formatMoney(totalNum, currency)}. Add funds or reduce the amount.
+                Insufficient spendable balance. You can fund up to {formatMoney(spendableBalance, currency)} (pending + available); this batch total is {formatMoney(totalNum, currency)}.
               </p>
             )}
           </div>

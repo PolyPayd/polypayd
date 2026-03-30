@@ -19,10 +19,10 @@ export default async function NewBatchPage({ params }: { params: Params }) {
 
   const { userId } = await auth();
   const currency = "GBP";
-  let walletBalance = 0;
+  let spendableBalance = 0;
   if (userId) {
     const wallet = await ensureWalletForUser(supabaseAdmin(), userId, currency);
-    if (wallet) walletBalance = wallet.pending_balance;
+    if (wallet) spendableBalance = wallet.pending_balance + wallet.current_balance;
   }
 
   return (
@@ -34,7 +34,7 @@ export default async function NewBatchPage({ params }: { params: Params }) {
           <CreateBatchForm
             orgId={orgId}
             createBatch={createBatch}
-            walletBalance={walletBalance}
+            spendableBalance={spendableBalance}
             currency={currency}
           />
         </div>

@@ -4,6 +4,8 @@ import { auth } from "@clerk/nextjs/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { ensureWalletForUser } from "@/lib/wallet";
 import { AddFundsButton } from "./AddFundsButton";
+import { WithdrawHeaderButton } from "./WithdrawHeaderButton";
+import { WithdrawTestPanel } from "./WithdrawTestPanel";
 import { WalletTopUpReturnHandler } from "./WalletTopUpReturnHandler";
 import { ImpactWalletCard } from "@/components/impact/ImpactWalletCard";
 import { fetchUserImpactContributionTotal } from "@/lib/impact";
@@ -105,6 +107,12 @@ export default async function WalletPage({
     currency
   );
 
+  const { data: connectAccount } = await supabase
+    .from("stripe_connect_accounts")
+    .select("stripe_account_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
       <div className="mx-auto max-w-4xl px-4 py-8">
@@ -121,7 +129,10 @@ export default async function WalletPage({
 
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <h1 className="text-2xl font-semibold text-white">Wallet</h1>
-          <AddFundsButton orgId={orgId} />
+          <div className="flex flex-wrap items-center gap-2">
+            <WithdrawHeaderButton />
+            <AddFundsButton orgId={orgId} />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -144,6 +155,12 @@ export default async function WalletPage({
             <div className="text-lg font-medium text-amber-300">{money(totalSent, currency)}</div>
           </div>
         </div>
+
+        <WithdrawTestPanel
+          availableToWithdrawGbp={available}
+          pendingFundsGbp={pending}
+          hasConnectedBank={Boolean(connectAccount?.stripe_account_id)}
+        />
 
         <div className="mb-8">
           <ImpactWalletCard userImpactTotal={userImpactTotal} currency={currency} schemaReady={impactSchemaReady} />
