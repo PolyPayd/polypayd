@@ -106,8 +106,15 @@ export async function POST(req: Request) {
     }
 
     const amountGbp = amountMinor / 100;
-    if (wallet.current_balance + 1e-9 < amountGbp) {
-      return NextResponse.json({ error: "Insufficient wallet balance." }, { status: 400 });
+    const available = wallet.current_balance;
+    if (available + 1e-9 < amountGbp) {
+      return NextResponse.json(
+        {
+          error:
+            "Insufficient available balance. Withdrawals use available funds only; pending top-ups must clear first.",
+        },
+        { status: 400 }
+      );
     }
 
     const transfer = await stripe.transfers.create(

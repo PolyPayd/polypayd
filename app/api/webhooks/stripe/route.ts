@@ -3,7 +3,10 @@ import type Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getStripeServerClient } from "@/lib/stripe";
 import { applyStripeWalletTopupFromPaymentIntent } from "@/lib/stripeWalletTopupApply";
-import { applyStripeBalanceAvailableFromEvent } from "@/lib/stripeBalanceAvailableApply";
+import {
+  applyStripeBalanceAvailableFromEvent,
+  sumGbpAvailableMinor,
+} from "@/lib/stripeBalanceAvailableApply";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,14 +66,63 @@ export async function POST(req: Request) {
     }
 
     if (event.type === "balance.available") {
-      const { data, error } = await applyStripeBalanceAvailableFromEvent(supabase, event as Stripe.BalanceAvailableEvent);
+      const balanceEvent = event as Stripe.BalanceAvailableEvent;
+      const availableGbpMinor = sumGbpAvailableMinor(balanceEvent.data.object);
+
+      const { data, error } = await applyStripeBalanceAvailableFromEvent(supabase, balanceEvent);
 
       if (error) {
-        console.error("SUPABASE RPC ERROR apply_stripe_balance_available_release:", {
-          error,
+        console.error("[stripe webhook] balance.available", {
+          success: false,
           eventId: event.id,
+          livemode: event.livemode,
+          availableGbpMinor,
+          rpcResult: null,
+          rpcError: error.message,
         });
+
+        const { error: auditErr } = await supabase.from("audit_events").insert({
+          org_id: null,
+          batch_id: null,
+          actor_user_id: null,
+          event_type: "stripe_balance_available_processed",
+          event_data: {
+            stripe_event_id: event.id,
+            livemode: event.livemode,
+            available_gbp_minor: availableGbpMinor,
+            rpc_result: { ok: false, error: error.message },
+          },
+        });
+        if (auditErr) {
+          console.error("audit_events stripe_balance_available_processed insert failed:", auditErr);
+        }
+
         return NextResponse.json({ error: error.message }, { status: error.status });
+      }
+
+      const rpcResult = data as Record<string, unknown> | null;
+      console.info("[stripe webhook] balance.available", {
+        success: true,
+        eventId: event.id,
+        livemode: event.livemode,
+        availableGbpMinor,
+        rpcResult,
+      });
+
+      const { error: auditErr } = await supabase.from("audit_events").insert({
+        org_id: null,
+        batch_id: null,
+        actor_user_id: null,
+        event_type: "stripe_balance_available_processed",
+        event_data: {
+          stripe_event_id: event.id,
+          livemode: event.livemode,
+          available_gbp_minor: availableGbpMinor,
+          rpc_result: rpcResult ?? null,
+        },
+      });
+      if (auditErr) {
+        console.error("audit_events stripe_balance_available_processed insert failed:", auditErr);
       }
 
       return NextResponse.json({ received: true, result: data }, { status: 200 });
