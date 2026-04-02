@@ -36,7 +36,15 @@ function AccordionChevron({ expanded }: { expanded: boolean }) {
   );
 }
 
-function friendlyConnectError(raw: string | undefined, httpStatus: number): string {
+function friendlyConnectError(raw: string | undefined, httpStatus: number, errorCode?: string): string {
+  if (
+    errorCode === "STRIPE_CONNECT_ACCOUNT_INVALID_OR_MISSING" ||
+    errorCode === "STRIPE_CONNECT_ACCOUNT_LINK_REJECTED"
+  ) {
+    const t = (raw ?? "").trim();
+    if (t.length > 0 && t.length < 280 && !t.includes("http")) return t;
+    return "Your saved bank connection doesn’t match this app’s Stripe mode (e.g. staging vs production). Click Connect again to create a fresh connection.";
+  }
   const t = (raw ?? "").trim();
   if (t === "You must be signed in." || httpStatus === 401) {
     return "Sign in again to connect your bank.";
@@ -169,10 +177,10 @@ export function WithdrawTestPanel({
         credentials: "include",
         body: "{}",
       });
-      const data = (await res.json()) as { error?: string; url?: string };
+      const data = (await res.json()) as { error?: string; url?: string; errorCode?: string };
       if (!res.ok) {
         console.debug("[WithdrawFundsPanel] connect error", { status: res.status, body: data });
-        setConnectError(friendlyConnectError(data.error, res.status));
+        setConnectError(friendlyConnectError(data.error, res.status, data.errorCode));
         return;
       }
       if (typeof data.url === "string" && data.url.length > 0) {
