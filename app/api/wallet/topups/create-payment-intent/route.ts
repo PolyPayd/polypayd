@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { ensureWalletForUser } from "@/lib/wallet";
 import { getStripeServerClient } from "@/lib/stripe";
+import { calculateTopupChargeFromWalletCredit } from "@/lib/payments/pricing";
+import { buildConnectedWalletTopupPaymentIntentParams } from "@/lib/walletConnectedTopupIntent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +20,7 @@ function isUuid(value: string) {
   return uuidRegex.test(value);
 }
 
-function parseAndValidateAmount(amount: unknown) {
+function parseAndValidateWalletCreditMinor(amount: unknown) {
   if (typeof amount !== "number" || !Number.isFinite(amount)) return null;
   if (amount < 1 || amount > 100_000) return null;
   const amountMinor = Math.round(amount * 100);
@@ -27,8 +29,8 @@ function parseAndValidateAmount(amount: unknown) {
 }
 
 /**
- * Creates a Stripe PaymentIntent for GBP wallet top-up.
- * Wallet is credited only by webhook after payment_intent.succeeded.
+ * Creates a Stripe PaymentIntent for GBP wallet top-up on the user's Connect account (direct charge).
+ * Platform keeps processing uplift via application_fee_amount; wallet credit stays metadata-driven.
  */
 export async function POST(req: Request) {
   try {
@@ -39,7 +41,7 @@ export async function POST(req: Request) {
 
     const body = (await req.json()) as CreateIntentBody;
     const orgId = String(body.orgId ?? "").trim();
-    const amountMinor = parseAndValidateAmount(body.amountGbp);
+    const walletCreditMinor = parseAndValidateWalletCreditMinor(body.amountGbp);
 
     if (!orgId) {
       return NextResponse.json({ error: "Missing orgId." }, { status: 400 });
@@ -47,16 +49,23 @@ export async function POST(req: Request) {
     if (!isUuid(orgId)) {
       return NextResponse.json({ error: "Invalid orgId format." }, { status: 400 });
     }
-    if (!amountMinor) {
+    if (!walletCreditMinor) {
       return NextResponse.json(
         { error: "Amount must be a valid GBP amount between 1.00 and 100,000.00." },
         { status: 400 }
       );
     }
 
+    let pricing;
+    try {
+      pricing = calculateTopupChargeFromWalletCredit(walletCreditMinor);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Invalid amount.";
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
+
     const supabase = supabaseAdmin();
 
-    // Authorization guard: only org members can create a top-up intent for that org.
     const { data: membership } = await supabase
       .from("org_members")
       .select("id")
@@ -68,24 +77,64 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "You do not have access to this organisation." }, { status: 403 });
     }
 
+    const { data: connectRow, error: connectErr } = await supabase
+      .from("stripe_connect_accounts")
+      .select("stripe_account_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (connectErr) {
+      console.error("stripe_connect_accounts select failed:", connectErr);
+      return NextResponse.json({ error: connectErr.message }, { status: 500 });
+    }
+
+    const stripeAccountId = connectRow?.stripe_account_id?.trim();
+    if (!stripeAccountId) {
+      return NextResponse.json(
+        {
+          error:
+            "A Stripe Connect account is required before adding funds. Complete Connect setup from your wallet.",
+          errorCode: "MISSING_CONNECT_ACCOUNT",
+        },
+        { status: 400 }
+      );
+    }
+
+    const stripe = getStripeServerClient();
+    const account = await stripe.accounts.retrieve(stripeAccountId);
+    if (!account.charges_enabled) {
+      return NextResponse.json(
+        {
+          error:
+            "Card payments are not enabled on your Stripe account yet. Finish Connect onboarding, then try again.",
+          errorCode: "CONNECT_CHARGES_NOT_ENABLED",
+        },
+        { status: 400 }
+      );
+    }
+
     const wallet = await ensureWalletForUser(supabase, userId, "GBP");
     if (!wallet) {
       return NextResponse.json({ error: "Failed to get or create wallet." }, { status: 500 });
     }
 
-    const stripe = getStripeServerClient();
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountMinor,
-      currency: "gbp",
-      automatic_payment_methods: { enabled: true },
-      metadata: {
-        clerk_user_id: userId,
-        org_id: orgId,
-        wallet_id: wallet.id,
-        wallet_currency: "GBP",
-        topup_amount_minor: String(amountMinor),
-      },
-    });
+    const metadata = {
+      clerk_user_id: userId,
+      org_id: orgId,
+      wallet_id: wallet.id,
+      wallet_currency: "GBP",
+      topup_type: "wallet_credit",
+      topup_funding_model: "connected",
+      stripe_connect_account_id: stripeAccountId,
+      wallet_credit_minor: String(pricing.walletCreditMinor),
+      total_charge_minor: String(pricing.totalChargeMinor),
+      processing_fee_minor: String(pricing.processingFeeMinor),
+    };
+
+    const paymentIntent = await stripe.paymentIntents.create(
+      buildConnectedWalletTopupPaymentIntentParams(pricing, metadata),
+      { stripeAccount: stripeAccountId }
+    );
 
     if (!paymentIntent.client_secret) {
       return NextResponse.json({ error: "Stripe did not return a client secret." }, { status: 500 });
@@ -94,6 +143,10 @@ export async function POST(req: Request) {
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
+      stripeAccountId,
+      walletCreditMinor: pricing.walletCreditMinor,
+      processingFeeMinor: pricing.processingFeeMinor,
+      totalChargeMinor: pricing.totalChargeMinor,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";

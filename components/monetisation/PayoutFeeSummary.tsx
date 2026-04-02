@@ -31,15 +31,15 @@ export function PayoutFeeSummary({ principalGbp, currency = "GBP", className = "
     >
       <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-6">
         <div>
-          <span className="text-neutral-500">Platform fee ({formatFeePercentLabel(PLATFORM_FEE_BPS)}): </span>
+          <span className="text-neutral-500">Payout amount: </span>
+          <span className="ml-1 font-medium text-white">{fmt(principal)}</span>
+        </div>
+        <div>
+          <span className="text-neutral-500">Fee ({formatFeePercentLabel(PLATFORM_FEE_BPS)}): </span>
           <span className="ml-1 font-medium text-neutral-100">{fmt(fee)}</span>
         </div>
         <div>
-          <span className="text-neutral-500">Recipients receive </span>
-          <span className="font-medium text-white">{fmt(principal)}</span>
-        </div>
-        <div>
-          <span className="text-neutral-500">Total you pay: </span>
+          <span className="text-neutral-500">Total deducted: </span>
           <span className="font-semibold text-white">{fmt(totalPay)}</span>
         </div>
       </div>

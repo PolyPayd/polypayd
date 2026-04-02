@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getStripeServerClient } from "@/lib/stripe";
 import { applyStripeWalletTopupFromPaymentIntent } from "@/lib/stripeWalletTopupApply";
@@ -13,7 +14,7 @@ type Body = {
 
 /**
  * Applies a succeeded wallet top-up using the PaymentIntent (same RPC as the webhook).
- * Use on localhost when Stripe cannot POST to /api/webhooks/stripe. Idempotent with webhooks.
+ * Retrieves the PI on the connected account when possible, else on the platform (legacy).
  */
 export async function POST(req: Request) {
   try {
@@ -28,8 +29,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing paymentIntentId." }, { status: 400 });
     }
 
+    const supabase = supabaseAdmin();
     const stripe = getStripeServerClient();
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    const { data: connectRow } = await supabase
+      .from("stripe_connect_accounts")
+      .select("stripe_account_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const stripeAccountId = connectRow?.stripe_account_id?.trim() ?? null;
+
+    let paymentIntent: Stripe.Response<Stripe.PaymentIntent> | null = null;
+
+    if (stripeAccountId) {
+      try {
+        paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+          stripeAccount: stripeAccountId,
+        });
+      } catch {
+        paymentIntent = null;
+      }
+    }
+
+    if (!paymentIntent) {
+      try {
+        paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Could not load PaymentIntent.";
+        return NextResponse.json({ error: msg }, { status: 400 });
+      }
+    }
 
     if (paymentIntent.status !== "succeeded") {
       return NextResponse.json(
@@ -48,7 +78,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing org on payment metadata." }, { status: 400 });
     }
 
-    const supabase = supabaseAdmin();
     const { data: membership } = await supabase
       .from("org_members")
       .select("id")
@@ -60,13 +89,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "You do not have access to this organisation." }, { status: 403 });
     }
 
+    const connectFromMetadata = paymentIntent.metadata?.stripe_connect_account_id?.trim() || null;
+
     const syntheticEventId = `client_sync:${paymentIntentId}`;
     const { data, error } = await applyStripeWalletTopupFromPaymentIntent(
       supabase,
       paymentIntent,
       syntheticEventId,
       "payment_intent.succeeded",
-      paymentIntent.livemode
+      paymentIntent.livemode,
+      connectFromMetadata
     );
 
     if (error) {

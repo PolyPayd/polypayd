@@ -2,23 +2,38 @@ import "server-only";
 import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** Sum Stripe Balance `available[]` amounts for GBP (minor units, pence). */
-export function sumGbpAvailableMinor(balance: Stripe.Balance | null | undefined): number {
-  if (!balance?.available?.length) return 0;
+/**
+ * Sum Stripe Balance `available[]` for GBP (minor units). Used only to update the platform
+ * reconciliation checkpoint — not to size user wallet pending→available releases.
+ */
+function sumGbpBalanceRows(
+  rows: Array<{ amount?: number; currency?: string }> | undefined,
+  currency: string
+): number {
+  if (!rows?.length) return 0;
   let sum = 0;
-  for (const row of balance.available) {
-    if ((row.currency || "").toLowerCase() === "gbp" && typeof row.amount === "number") {
+  const c = currency.toLowerCase();
+  for (const row of rows) {
+    if ((row.currency || "").toLowerCase() === c && typeof row.amount === "number") {
       sum += row.amount;
     }
   }
   return sum;
 }
 
+export function sumGbpAvailableMinor(balance: Stripe.Balance | null | undefined): number {
+  return sumGbpBalanceRows(balance?.available, "gbp");
+}
+
+export function sumGbpPendingMinor(balance: Stripe.Balance | null | undefined): number {
+  return sumGbpBalanceRows(balance?.pending, "gbp");
+}
+
 export type BalanceAvailableApplyError = { status: number; message: string };
 
 /**
- * Idempotent: one ledger row per Stripe event id. Moves wallet pending → current in FIFO
- * (see apply_stripe_balance_available_release migration).
+ * Idempotent: one parent ledger row per Stripe event id. RPC records Stripe available for audit
+ * and releases pending → current using intended top-up queue amounts (not Stripe net deltas).
  */
 export async function applyStripeBalanceAvailableFromEvent(
   supabase: SupabaseClient,

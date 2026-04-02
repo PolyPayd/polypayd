@@ -34,7 +34,8 @@ function authorize(req: Request, secret: string): boolean {
 
 /**
  * Manual fallback: calls apply_stripe_balance_available_release (same as balance.available webhook).
- * Not Clerk-protected so ops can curl; requires POLYPAYD_ADMIN_RELEASE_SECRET (min 16 chars).
+ * Body `newAvailableGbpMinor` updates the reconciliation checkpoint only; wallet release sizes come
+ * from wallet_topup_release_queue + pending_balance, not from this value’s delta.
  */
 export async function POST(req: Request) {
   const secret = adminSecretConfigured();

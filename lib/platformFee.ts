@@ -1,7 +1,9 @@
+import { PAYOUT_PLATFORM_FEE_BPS } from "@/lib/payments/pricing";
+
 /**
  * Platform fee on payouts (basis points). Must match `c_platform_fee_bps` in DB RPCs.
  */
-export const PLATFORM_FEE_BPS = 150;
+export const PLATFORM_FEE_BPS = PAYOUT_PLATFORM_FEE_BPS;
 
 /**
  * Historical constant; fee is bps-only in DB (no £1 floor). Kept for imports that expect this export.

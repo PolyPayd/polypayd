@@ -9,8 +9,16 @@ import { WithdrawTestPanel } from "./WithdrawTestPanel";
 import { WalletTopUpReturnHandler } from "./WalletTopUpReturnHandler";
 import { ImpactWalletCard } from "@/components/impact/ImpactWalletCard";
 import { fetchUserImpactContributionTotal } from "@/lib/impact";
+import type { WalletDashboardLedgerTotals } from "@/lib/walletDashboardAggregates";
+import {
+  fetchWalletRecentTransactionRows,
+  type WalletRecentStatusVariant,
+} from "@/lib/walletRecentTransactions";
+import { getStripeServerClient } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
+
+/** Ledger totals use `wallet_dashboard_ledger_aggregates` (full history). See `lib/walletDashboardAggregates.ts`. */
 
 type Params = { orgId: string };
 
@@ -18,12 +26,23 @@ function money(amount: number, currency = "GBP") {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(amount);
 }
 
-function mapLedgerReferenceType(refType: string) {
-  if (refType === "batch_run") return "Bulk Send";
-  if (refType === "batch_payout") return "Claim Link Payout";
-  if (refType === "wallet_funding") return "Top-up";
-  if (refType === "wallet_funding_release") return "Funds available";
-  return refType;
+function statusBadgeClass(v: WalletRecentStatusVariant): string {
+  if (v === "pending") {
+    return "border-amber-500/35 bg-amber-950/40 text-amber-100";
+  }
+  if (v === "available") {
+    return "border-emerald-500/35 bg-emerald-950/40 text-emerald-100";
+  }
+  if (v === "partial") {
+    return "border-sky-500/30 bg-sky-950/30 text-sky-100/95";
+  }
+  if (v === "allocated") {
+    return "border-neutral-600 bg-neutral-900/70 text-neutral-200";
+  }
+  if (v === "failed") {
+    return "border-red-500/35 bg-red-950/45 text-red-100";
+  }
+  return "";
 }
 
 export default async function WalletPage({
@@ -69,34 +88,21 @@ export default async function WalletPage({
     );
   }
 
-  let totalFunded = 0;
-  let totalSent = 0;
-  const recentRows: Array<{ id: string; date: string; reference_type: string; entry_type: string; amount: number }> = [];
+  const { data: aggRaw, error: aggError } = await supabase.rpc("wallet_dashboard_ledger_aggregates", {
+    p_wallet_id: wallet.id,
+  });
 
-  const { data: entries } = await supabase
-    .from("ledger_entries")
-    .select("id, amount, entry_type, created_at, ledger_transactions(reference_type, created_at)")
-    .eq("wallet_id", wallet.id)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  if (entries) {
-    for (const row of entries) {
-      const txn = row.ledger_transactions as { reference_type?: string; created_at?: string } | null;
-      const refType = txn?.reference_type ?? "—";
-      const mappedRefType = mapLedgerReferenceType(refType);
-      const amt = Number(row.amount ?? 0);
-      if (row.entry_type === "credit" && refType === "wallet_funding") totalFunded += amt;
-      if (row.entry_type === "debit") totalSent += amt;
-      recentRows.push({
-        id: row.id ?? "",
-        date: row.created_at ?? "",
-        reference_type: mappedRefType,
-        entry_type: row.entry_type ?? "—",
-        amount: amt,
-      });
-    }
+  if (aggError) {
+    console.error("wallet_dashboard_ledger_aggregates failed (apply migration 20260331200000):", aggError.message);
   }
+
+  const agg = (aggRaw ?? null) as Record<string, unknown> | null;
+  const totals: WalletDashboardLedgerTotals = {
+    totalFunded: Number(agg?.total_funded ?? 0),
+    totalSent: Number(agg?.total_sent ?? 0),
+  };
+
+  const recentRows = await fetchWalletRecentTransactionRows(supabase, wallet.id);
 
   const available = wallet.current_balance;
   const pending = wallet.pending_balance;
@@ -112,6 +118,25 @@ export default async function WalletPage({
     .select("stripe_account_id")
     .eq("user_id", userId)
     .maybeSingle();
+
+  let addFundsBlockedReason: string | null = null;
+  if (!connectAccount?.stripe_account_id) {
+    addFundsBlockedReason =
+      "Create your Stripe Connect account first (Connect bank below), then you can add funds.";
+  } else {
+    try {
+      const stripe = getStripeServerClient();
+      const acct = await stripe.accounts.retrieve(connectAccount.stripe_account_id);
+      if (!acct.charges_enabled) {
+        addFundsBlockedReason =
+          "Finish Stripe Connect onboarding until card payments are enabled, then add funds.";
+      }
+    } catch (e) {
+      console.error("wallet page Stripe accounts.retrieve:", e);
+      addFundsBlockedReason =
+        "We could not verify your Stripe account. Refresh the page or try again shortly.";
+    }
+  }
 
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100">
@@ -131,7 +156,7 @@ export default async function WalletPage({
           <h1 className="text-2xl font-semibold text-white">Wallet</h1>
           <div className="flex flex-wrap items-center gap-2">
             <WithdrawHeaderButton />
-            <AddFundsButton orgId={orgId} />
+            <AddFundsButton orgId={orgId} addFundsBlockedReason={addFundsBlockedReason} />
           </div>
         </div>
 
@@ -148,11 +173,11 @@ export default async function WalletPage({
           </div>
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
             <div className="text-sm text-neutral-500 mb-1">Total funded</div>
-            <div className="text-lg font-medium text-emerald-300">{money(totalFunded, currency)}</div>
+            <div className="text-lg font-medium text-emerald-300">{money(totals.totalFunded, currency)}</div>
           </div>
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
             <div className="text-sm text-neutral-500 mb-1">Total sent</div>
-            <div className="text-lg font-medium text-amber-300">{money(totalSent, currency)}</div>
+            <div className="text-lg font-medium text-amber-300">{money(totals.totalSent, currency)}</div>
           </div>
         </div>
 
@@ -169,7 +194,9 @@ export default async function WalletPage({
         <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
           <h2 className="text-sm font-medium text-neutral-400 mb-4">Recent transactions</h2>
           {recentRows.length === 0 ? (
-            <p className="text-sm text-neutral-500">No payouts yet. Start by creating a Bulk Send or Claim Link.</p>
+            <p className="text-sm text-neutral-500">
+              No activity yet. Add funds or create a Bulk Send or Claim Link payout.
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
@@ -177,7 +204,7 @@ export default async function WalletPage({
                   <tr>
                     <th className="text-left py-2 pr-4">Date</th>
                     <th className="text-left py-2 pr-4">Type</th>
-                    <th className="text-left py-2 pr-4">Entry</th>
+                    <th className="text-left py-2 pr-4">Status</th>
                     <th className="text-right py-2">Amount</th>
                   </tr>
                 </thead>
@@ -187,13 +214,23 @@ export default async function WalletPage({
                       <td className="py-2 pr-4 text-neutral-300">
                         {r.date ? new Date(r.date).toLocaleString("en-GB") : "—"}
                       </td>
-                      <td className="py-2 pr-4 text-neutral-300">{r.reference_type}</td>
+                      <td className="py-2 pr-4 text-neutral-300">{r.typeLabel}</td>
                       <td className="py-2 pr-4">
-                        <span className={r.entry_type === "credit" ? "text-emerald-300" : "text-amber-300"}>
-                          {r.entry_type}
-                        </span>
+                        {r.statusLabel && r.statusVariant ? (
+                          <span
+                            className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium ${statusBadgeClass(r.statusVariant)}`}
+                          >
+                            {r.statusLabel}
+                          </span>
+                        ) : (
+                          <span className="text-neutral-600">—</span>
+                        )}
                       </td>
-                      <td className="py-2 text-right font-medium text-neutral-200">
+                      <td
+                        className={`py-2 text-right font-medium tabular-nums ${
+                          r.entry_type === "credit" ? "text-emerald-300" : "text-amber-200"
+                        }`}
+                      >
                         {r.entry_type === "credit" ? "+" : "-"}
                         {money(r.amount, currency)}
                       </td>
