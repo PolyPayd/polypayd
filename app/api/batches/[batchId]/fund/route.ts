@@ -1,5 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import {
+  BATCH_FUND_INSUFFICIENT_WALLET,
+  sanitizeFundBatchErrorForUser,
+  userMessageForFundBatchRpcResultError,
+} from "@/lib/batchFundUserFacing";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
@@ -69,11 +74,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ batchId: strin
 
     if (error) {
       console.error("fund_batch_from_wallet RPC error:", error);
-      const msg = error.message ?? "Fund failed";
-      if (msg.includes("Insufficient wallet balance")) {
-        return NextResponse.json({ error: msg }, { status: 400 });
-      }
-      return NextResponse.json({ error: msg }, { status: 500 });
+      const raw = error.message ?? "";
+      const userMsg = sanitizeFundBatchErrorForUser(raw);
+      const status = userMsg === BATCH_FUND_INSUFFICIENT_WALLET ? 400 : 500;
+      return NextResponse.json({ error: userMsg }, { status });
     }
 
     const result = data as {
@@ -89,7 +93,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ batchId: strin
     } | null;
 
     if (!result?.ok) {
-      return NextResponse.json({ error: result?.error ?? "Fund failed" }, { status: 400 });
+      const userMsg = userMessageForFundBatchRpcResultError(result?.error ?? null);
+      return NextResponse.json({ error: userMsg }, { status: 400 });
     }
 
     return NextResponse.json({
@@ -103,8 +108,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ batchId: strin
       recipientCount: result.recipient_count,
     });
   } catch (e) {
-    const message = e instanceof Error ? e.message : "Unexpected error";
     console.error("POST /api/batches/[batchId]/fund:", e);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: sanitizeFundBatchErrorForUser(e instanceof Error ? e.message : null) },
+      { status: 500 }
+    );
   }
 }

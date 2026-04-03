@@ -301,17 +301,47 @@ export default async function BatchDetailsPage({
     : null;
 
   const batchStatus = String(batch.status ?? "").toLowerCase();
+  const claimableExpired = Boolean(
+    batch.expires_at && new Date(batch.expires_at).getTime() < Date.now()
+  );
   const bulkSendLocked = !isClaimable && (batchStatus === "completed" || batchStatus === "completed_with_errors");
-  const claimableSendEligible =
+  const claimPoolTotal = Number(batch.total_amount ?? 0);
+  const claimsAllocSum = isClaimable
+    ? claimableClaims.reduce((s, c) => s + c.claim_amount, 0)
+    : 0;
+  const fundBatchClaimsMatchPool =
     isClaimable &&
-    allocationsLocked &&
-    batchStatus !== "completed" &&
-    batchStatus !== "completed_with_errors" &&
-    batchStatus !== "funded" &&
-    batchStatus !== "claiming" &&
-    canPerformActions &&
     claimableClaims.length >= 1 &&
-    Math.abs(claimableClaims.reduce((s, c) => s + c.claim_amount, 0) - Number(batch.total_amount ?? 0)) < 0.01;
+    Math.abs(claimsAllocSum - claimPoolTotal) < 0.01;
+  const fundBatchStatusBlocksFundingUi =
+    batchStatus === "funded" ||
+    batchStatus === "claiming" ||
+    batchStatus === "completed" ||
+    batchStatus === "completed_with_errors" ||
+    batchStatus === "failed";
+
+  const showFundBatchFromWalletPanel =
+    isClaimable &&
+    claimableSchemaReady &&
+    allocationsLocked &&
+    canPerformActions &&
+    !fundBatchStatusBlocksFundingUi;
+
+  const canFundBatchFromWallet =
+    showFundBatchFromWalletPanel && fundBatchClaimsMatchPool && !claimableExpired;
+
+  let fundBatchBlockedReason: string | null = null;
+  if (showFundBatchFromWalletPanel && !canFundBatchFromWallet) {
+    if (claimableExpired) {
+      fundBatchBlockedReason =
+        "This claim link has expired, so this batch can't be funded.";
+    } else if (!fundBatchClaimsMatchPool) {
+      fundBatchBlockedReason =
+        "Recipients and amounts must match the pool total before you can fund.";
+    } else {
+      fundBatchBlockedReason = "This batch can't be funded right now.";
+    }
+  }
   // Fund-from-wallet replaces legacy one-shot Send for new claimable batches (per-recipient claim links after fund).
 
   // 2) Uploads (for tab + latest)
@@ -501,8 +531,6 @@ export default async function BatchDetailsPage({
     },
   ];
 
-  const claimableExpired =
-    batch.expires_at && new Date(batch.expires_at).getTime() < Date.now();
   const claimableFull = hasSlots
     ? openSlotsCount === 0
     : typeof batch.max_claims === "number" &&
@@ -699,11 +727,13 @@ export default async function BatchDetailsPage({
               storedBatchCode={batch.batch_code}
               publicSiteUrl={getPublicSiteUrl()}
             />
-            {claimableSendEligible && (
+            {showFundBatchFromWalletPanel && (
               <FundBatchFromWalletButton
                 orgId={batch.org_id}
                 batchId={batch.id}
                 poolTotalGbp={Number(batch.total_amount ?? 0)}
+                fundEnabled={canFundBatchFromWallet}
+                fundBlockedReason={fundBatchBlockedReason}
               />
             )}
           </div>
