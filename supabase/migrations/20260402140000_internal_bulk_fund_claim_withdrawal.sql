@@ -375,6 +375,7 @@ as $$
 declare
   v_batch public.batches%rowtype;
   v_org_ok boolean;
+  v_batch_status text;
   v_alloc_total numeric(18,2);
   v_claim_count int;
   v_total_amount numeric(18,2);
@@ -458,16 +459,22 @@ begin
     );
   end if;
 
-  if lower(trim(coalesce(v_batch.status, ''))) in ('completed', 'completed_with_errors') then
+  v_batch_status := lower(trim(coalesce(v_batch.status, '')));
+
+  if v_batch_status in ('completed', 'completed_with_errors') then
     return jsonb_build_object('ok', false, 'error', 'Batch is not in a fundable state');
   end if;
 
-  if lower(trim(coalesce(v_batch.status, ''))) in ('funded', 'claiming') then
+  if v_batch_status in ('funded', 'claiming') then
     return jsonb_build_object(
       'ok', false,
       'error',
       'Batch is marked funded but no fund ledger was found; contact support with the batch ID.'
     );
+  end if;
+
+  if v_batch_status not in ('draft', 'ready', 'processing') then
+    return jsonb_build_object('ok', false, 'error', 'Batch is not in a fundable state');
   end if;
 
   v_total_amount := coalesce(v_batch.total_amount, 0)::numeric(18,2);

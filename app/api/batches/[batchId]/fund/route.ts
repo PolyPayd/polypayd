@@ -1,6 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import {
+  batchFundIdempotencyKey,
+  isBatchPastWalletFundStage,
+  isBatchStatusFundableFromWallet,
+} from "@/lib/batchClaimableFunding";
+import {
   BATCH_FUND_INSUFFICIENT_WALLET,
   sanitizeFundBatchErrorForUser,
   userMessageForFundBatchRpcResultError,
@@ -59,12 +64,56 @@ export async function POST(req: Request, ctx: { params: Promise<{ batchId: strin
 
     const { data: batchRow } = await supabase
       .from("batches")
-      .select("id, org_id")
+      .select("id, org_id, batch_type, status, allocations_locked_at")
       .eq("id", batchId)
       .maybeSingle();
 
     if (!batchRow || batchRow.org_id !== orgId) {
       return NextResponse.json({ error: "Batch not found." }, { status: 404 });
+    }
+
+    if ((batchRow.batch_type ?? "").toLowerCase() !== "claimable") {
+      return NextResponse.json(
+        { error: userMessageForFundBatchRpcResultError("Only claimable batches can be funded this way") },
+        { status: 400 }
+      );
+    }
+
+    if (batchRow.allocations_locked_at == null) {
+      return NextResponse.json(
+        { error: userMessageForFundBatchRpcResultError("Allocations must be finalized before funding") },
+        { status: 400 }
+      );
+    }
+
+    const rowStatus = String(batchRow.status ?? "").toLowerCase();
+    if (isBatchPastWalletFundStage(rowStatus)) {
+      return NextResponse.json(
+        { error: userMessageForFundBatchRpcResultError("Batch is not in a fundable state") },
+        { status: 400 }
+      );
+    }
+    if (!isBatchStatusFundableFromWallet(rowStatus)) {
+      return NextResponse.json(
+        { error: userMessageForFundBatchRpcResultError("Batch is not in a fundable state") },
+        { status: 400 }
+      );
+    }
+
+    const fundKey = batchFundIdempotencyKey(batchId);
+    const { data: existingFundLedger } = await supabase
+      .from("ledger_transactions")
+      .select("id")
+      .eq("idempotency_key", fundKey)
+      .maybeSingle();
+
+    if (existingFundLedger?.id) {
+      return NextResponse.json({
+        ok: true,
+        alreadyFunded: true,
+        ledgerTransactionId: existingFundLedger.id,
+        batchId,
+      });
     }
 
     const { data, error } = await supabase.rpc("fund_batch_from_wallet", {
@@ -73,8 +122,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ batchId: strin
     });
 
     if (error) {
-      console.error("fund_batch_from_wallet RPC error:", error);
       const raw = error.message ?? "";
+      console.error("fund_batch_from_wallet RPC error (sanitized for client):", {
+        raw,
+        code: (error as { code?: string }).code,
+        details: (error as { details?: string }).details,
+        hint: (error as { hint?: string }).hint,
+      });
       const userMsg = sanitizeFundBatchErrorForUser(raw);
       const status = userMsg === BATCH_FUND_INSUFFICIENT_WALLET ? 400 : 500;
       return NextResponse.json({ error: userMsg }, { status });

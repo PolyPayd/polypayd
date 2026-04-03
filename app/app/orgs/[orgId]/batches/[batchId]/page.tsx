@@ -17,6 +17,11 @@ import { RunBatchButton } from "./RunBatchButton";
 import { UploadCsvButton } from "./UploadCsvButton";
 import { ImpactQueryToast } from "@/components/impact/ImpactQueryToast";
 import {
+  batchFundIdempotencyKey,
+  isBatchPastWalletFundStage,
+  isBatchStatusFundableFromWallet,
+} from "@/lib/batchClaimableFunding";
+import {
   formatAuditEventDataRaw,
   formatAuditEventSummary,
   formatAuditEventTitle,
@@ -183,6 +188,11 @@ export default async function BatchDetailsPage({
   const totalClaimedFromSlots = claimSlots.filter((s) => s.status === "claimed").reduce((sum, s) => sum + s.amount, 0);
   const hasSlots = claimSlots.length > 0;
   const openSlotsCount = claimSlots.filter((s) => s.status === "open").length;
+  const claimableFull = hasSlots
+    ? openSlotsCount === 0
+    : typeof batch.max_claims === "number" &&
+      batch.max_claims > 0 &&
+      (batch.recipient_count ?? 0) >= batch.max_claims;
 
   let claimableClaims: Array<{
     id: string;
@@ -261,6 +271,16 @@ export default async function BatchDetailsPage({
     }
   }
 
+  let hasBatchFundLedger = false;
+  if (isClaimable) {
+    const { data: batchFundLedgerRow } = await supabase
+      .from("ledger_transactions")
+      .select("id")
+      .eq("idempotency_key", batchFundIdempotencyKey(batchId))
+      .maybeSingle();
+    hasBatchFundLedger = Boolean(batchFundLedgerRow?.id);
+  }
+
   // Current user's org role (viewer = read-only; owner/operator = can perform actions)
   const { userId } = await auth();
   let role: string | null = null;
@@ -313,25 +333,25 @@ export default async function BatchDetailsPage({
     isClaimable &&
     claimableClaims.length >= 1 &&
     Math.abs(claimsAllocSum - claimPoolTotal) < 0.01;
-  const fundBatchStatusBlocksFundingUi =
-    batchStatus === "funded" ||
-    batchStatus === "claiming" ||
-    batchStatus === "completed" ||
-    batchStatus === "completed_with_errors" ||
+
+  const fundUiPastFunding =
+    hasBatchFundLedger ||
+    isBatchPastWalletFundStage(batchStatus) ||
     batchStatus === "failed";
 
-  const showFundBatchFromWalletPanel =
+  const showFundBatchFromWalletButton =
     isClaimable &&
     claimableSchemaReady &&
     allocationsLocked &&
     canPerformActions &&
-    !fundBatchStatusBlocksFundingUi;
+    !fundUiPastFunding &&
+    isBatchStatusFundableFromWallet(batchStatus);
 
   const canFundBatchFromWallet =
-    showFundBatchFromWalletPanel && fundBatchClaimsMatchPool && !claimableExpired;
+    showFundBatchFromWalletButton && fundBatchClaimsMatchPool && !claimableExpired;
 
   let fundBatchBlockedReason: string | null = null;
-  if (showFundBatchFromWalletPanel && !canFundBatchFromWallet) {
+  if (showFundBatchFromWalletButton && !canFundBatchFromWallet) {
     if (claimableExpired) {
       fundBatchBlockedReason =
         "This claim link has expired, so this batch can't be funded.";
@@ -342,6 +362,15 @@ export default async function BatchDetailsPage({
       fundBatchBlockedReason = "This batch can't be funded right now.";
     }
   }
+
+  const claimableFundStatusMessage: string | null =
+    isClaimable && claimableSchemaReady && allocationsLocked && fundUiPastFunding
+      ? batchStatus === "completed" || batchStatus === "completed_with_errors"
+        ? "Wallet funding is complete for this batch. Payout results are shown below."
+        : batchStatus === "failed"
+          ? "This batch is in a failed state. Funding from your wallet is not available."
+          : "This batch is funded. Recipients can claim using their personal links."
+      : null;
   // Fund-from-wallet replaces legacy one-shot Send for new claimable batches (per-recipient claim links after fund).
 
   // 2) Uploads (for tab + latest)
@@ -531,11 +560,6 @@ export default async function BatchDetailsPage({
     },
   ];
 
-  const claimableFull = hasSlots
-    ? openSlotsCount === 0
-    : typeof batch.max_claims === "number" &&
-      batch.max_claims > 0 &&
-      (batch.recipient_count ?? 0) >= batch.max_claims;
   const claimableTimeline = [
     { label: "Batch created", time: batch.created_at, status: "done" as const },
     {
@@ -727,7 +751,12 @@ export default async function BatchDetailsPage({
               storedBatchCode={batch.batch_code}
               publicSiteUrl={getPublicSiteUrl()}
             />
-            {showFundBatchFromWalletPanel && (
+            {claimableFundStatusMessage && (
+              <p className="text-sm text-emerald-200/90 max-w-md rounded-lg border border-emerald-800/40 bg-emerald-950/20 px-3 py-2">
+                {claimableFundStatusMessage}
+              </p>
+            )}
+            {showFundBatchFromWalletButton && (
               <FundBatchFromWalletButton
                 orgId={batch.org_id}
                 batchId={batch.id}
