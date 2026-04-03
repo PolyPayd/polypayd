@@ -16,8 +16,15 @@ import { ReplaceCsvButton } from "./ReplaceCsvButton";
 import { RunBatchButton } from "./RunBatchButton";
 import { UploadCsvButton } from "./UploadCsvButton";
 import { ImpactQueryToast } from "@/components/impact/ImpactQueryToast";
+import {
+  formatAuditEventDataRaw,
+  formatAuditEventSummary,
+  formatAuditEventTitle,
+  resolveAuditActorLabel,
+} from "@/lib/batchAuditActivity";
 import { fetchClerkRecipientProfiles } from "@/lib/clerkUserDisplay";
 import { formatRecipientLifecycleLabel, resolveRecipientDisplay } from "@/lib/recipientDisplay";
+import { getPublicSiteUrl } from "@/lib/publicSiteUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -417,6 +424,18 @@ export default async function BatchDetailsPage({
     }));
   }
 
+  let auditActorProfiles = new Map<string, { displayName: string; primaryEmail: string | null }>();
+  if (auditEvents.length > 0) {
+    const actorIds = [
+      ...new Set(
+        auditEvents.map((e) => e.actor_user_id).filter((id): id is string => Boolean(id && String(id).trim()))
+      ),
+    ];
+    if (actorIds.length > 0) {
+      auditActorProfiles = await fetchClerkRecipientProfiles(actorIds);
+    }
+  }
+
   // 5) Errors for selected upload
   let uploadErrors: any[] = [];
   let errorsErr: any = null;
@@ -525,14 +544,19 @@ export default async function BatchDetailsPage({
             <span className={statusBadge(batch.status)}>{batch.status ?? "unknown"}</span>
           </div>
 
-          <div className="mt-2 space-y-1 text-sm text-neutral-400">
-            <div>
-              Batch ID: <span className="font-mono text-neutral-300">{batch.id}</span>
+          <details className="mt-3 text-xs text-neutral-600">
+            <summary className="cursor-pointer text-neutral-500 hover:text-neutral-400 select-none">
+              Technical details
+            </summary>
+            <div className="mt-2 space-y-1 pl-1 font-mono text-[11px] text-neutral-500 break-all">
+              <div>
+                <span className="text-neutral-600">Batch ID</span> {batch.id}
+              </div>
+              <div>
+                <span className="text-neutral-600">Org ID</span> {batch.org_id}
+              </div>
             </div>
-            <div>
-              Org ID: <span className="font-mono text-neutral-300">{batch.org_id}</span>
-            </div>
-          </div>
+          </details>
         </div>
 
         <div className="flex flex-col items-end gap-3">
@@ -671,7 +695,10 @@ export default async function BatchDetailsPage({
             </p>
           )}
           <div className="mb-4 flex flex-wrap items-center gap-3">
-            <ClaimableBatchShare batchCode={batch.batch_code} />
+            <ClaimableBatchShare
+              storedBatchCode={batch.batch_code}
+              publicSiteUrl={getPublicSiteUrl()}
+            />
             {claimableSendEligible && (
               <FundBatchFromWalletButton
                 orgId={batch.org_id}
@@ -1431,40 +1458,90 @@ export default async function BatchDetailsPage({
 
       {/* ACTIVITY TAB */}
       {(tab === "activity" || isClaimable) && (
-        <div className="rounded-xl border border-neutral-800 overflow-hidden">
-          <div className="p-4 border-b border-neutral-800">
-            <h2 className="text-lg font-semibold">Activity</h2>
-            <div className="text-sm text-neutral-400">Show latest 100 events</div>
+        <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/20 overflow-hidden shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
+          <div className="p-5 sm:p-6 border-b border-neutral-800/80">
+            <h2 className="text-lg font-semibold text-white tracking-tight">Activity</h2>
+            <p className="text-sm text-neutral-500 mt-1 leading-relaxed">
+              Latest updates for this batch (up to 100). Technical payloads stay under each row.
+            </p>
           </div>
 
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
-              <thead className="bg-neutral-900/50 text-neutral-300">
-                <tr>
-                  <th className="text-left p-3">Time</th>
-                  <th className="text-left p-3">Event</th>
-                  <th className="text-left p-3">Actor</th>
-                  <th className="text-left p-3">Details</th>
+              <thead>
+                <tr className="border-b border-neutral-800 bg-neutral-900/70">
+                  <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500 w-44">
+                    When
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500 min-w-[200px]">
+                    What happened
+                  </th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500 w-48">
+                    Who
+                  </th>
                 </tr>
               </thead>
-              <tbody>
-                {auditEvents.map((e) => (
-                  <tr key={e.id} className="border-t border-neutral-800">
-                    <td className="p-3 text-neutral-300">
-                      {e.created_at ? new Date(e.created_at).toLocaleString("en-GB") : "—"}
-                    </td>
-                    <td className="p-3 font-medium">{e.event_type}</td>
-                    <td className="p-3">{e.actor_user_id ?? "System"}</td>
-                    <td className="p-3 font-mono text-xs text-neutral-400 max-w-md truncate" title={JSON.stringify(e.event_data)}>
-                      {JSON.stringify(e.event_data)}
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-neutral-800/80">
+                {auditEvents.map((e) => {
+                  const summary = formatAuditEventSummary(e.event_type, e.event_data);
+                  const actorLabel = resolveAuditActorLabel(e.actor_user_id, userId, auditActorProfiles);
+                  const payloadKeys = Object.keys(e.event_data ?? {});
+                  const rawPayload = formatAuditEventDataRaw(e.event_data);
+                  return (
+                    <tr key={e.id} className="bg-neutral-950/15 align-top">
+                      <td className="py-4 px-4 text-neutral-400 whitespace-nowrap">
+                        {e.created_at ? (
+                          <>
+                            <div className="text-neutral-200 text-sm">
+                              {new Date(e.created_at).toLocaleDateString("en-GB", {
+                                day: "numeric",
+                                month: "short",
+                              })}
+                            </div>
+                            <div className="text-xs text-neutral-500 mt-0.5">
+                              {new Date(e.created_at).toLocaleTimeString("en-GB", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="font-semibold text-neutral-100 leading-snug">
+                          {formatAuditEventTitle(e.event_type)}
+                        </div>
+                        {summary ? (
+                          <p className="text-sm text-neutral-400 mt-1.5 leading-relaxed max-w-xl">{summary}</p>
+                        ) : null}
+                        {payloadKeys.length > 0 && (
+                          <details className="mt-3 group">
+                            <summary className="cursor-pointer text-xs text-neutral-600 hover:text-neutral-400 select-none list-none flex items-center gap-1.5">
+                              <span className="text-neutral-500 group-open:rotate-90 transition-transform inline-block">
+                                ▸
+                              </span>
+                              Technical details
+                            </summary>
+                            <pre className="mt-2 p-3 rounded-lg border border-neutral-800/80 bg-neutral-950/60 text-[11px] text-neutral-500 overflow-x-auto font-mono leading-relaxed max-w-2xl">
+                              {rawPayload}
+                            </pre>
+                          </details>
+                        )}
+                      </td>
+                      <td className="py-4 px-4 text-neutral-300 text-sm leading-snug">{actorLabel}</td>
+                    </tr>
+                  );
+                })}
 
                 {!auditEvents.length && (
                   <tr>
-                    <td className="p-4 text-neutral-400" colSpan={4}>
-                      No activity events for this batch.
+                    <td className="py-12 px-4 text-center text-neutral-500" colSpan={3}>
+                      <p className="text-sm font-medium text-neutral-400">No activity yet</p>
+                      <p className="text-sm text-neutral-600 mt-2 max-w-sm mx-auto leading-relaxed">
+                        Actions such as funding, claims, and approvals will appear here.
+                      </p>
                     </td>
                   </tr>
                 )}

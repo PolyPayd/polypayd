@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { formatExpiryDateTime, formatExpiryTimeLeft } from "@/lib/formatExpiry";
+import { claimJoinAppPath, formatBatchCodeForDisplay } from "@/lib/batchCodePublic";
 import { getClaimableBatchInfo, normalizeBatchCode } from "@/lib/claimableBatch";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { joinClaimableBatch } from "../../join-batch/actions";
@@ -73,8 +74,8 @@ export default async function ClaimPage({ params }: { params: Params }) {
                 <dd className="font-medium text-neutral-200">{batch.name ?? "—"}</dd>
               </div>
               <div>
-                <dt className="text-neutral-500">Batch code</dt>
-                <dd className="font-mono text-neutral-200">{batch.batch_code ?? "—"}</dd>
+                <dt className="text-neutral-500">Invite code</dt>
+                <dd className="font-mono text-neutral-200">{formatBatchCodeForDisplay(batch.batch_code ?? code)}</dd>
               </div>
               {(nextClaimAmount != null && nextClaimAmount > 0) && (
                 <div>
@@ -116,7 +117,7 @@ export default async function ClaimPage({ params }: { params: Params }) {
               <div className="pt-4 border-t border-neutral-700">
                 <p className="text-neutral-300 mb-3">Sign in to join this batch.</p>
                 <Link
-                  href={`/sign-in?redirect_url=${encodeURIComponent(`/app/claim/${code}`)}`}
+                  href={`/sign-in?redirect_url=${encodeURIComponent(claimJoinAppPath(formatBatchCodeForDisplay(batch.batch_code ?? code)))}`}
                   className="rounded-lg border border-neutral-600 px-4 py-2 text-sm font-medium text-neutral-200 hover:bg-neutral-800"
                 >
                   Sign in

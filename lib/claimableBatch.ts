@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { batchCodesForLookup } from "./batchCodePublic";
 import { isClaimableSchemaError, CLAIMABLE_SCHEMA_MESSAGE } from "./dbSchema";
 
 export function normalizeBatchCode(raw: string): string {
@@ -51,10 +52,11 @@ export async function getClaimableBatchInfo(
     return { ...empty, statusMessage: "Batch not found." };
   }
 
+  const lookupCodes = batchCodesForLookup(code);
   const { data: batchRow, error: batchErr } = await supabase
     .from("batches")
     .select("id, org_id, name, batch_code, batch_type, expires_at, max_claims, status, total_amount, amount_per_claim, currency, allocation_mode, allocations_locked_at")
-    .eq("batch_code", code)
+    .in("batch_code", lookupCodes)
     .maybeSingle();
 
   if (batchErr) {

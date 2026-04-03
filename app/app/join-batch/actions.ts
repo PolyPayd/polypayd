@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { toPublicBatchCode } from "@/lib/batchCodePublic";
 import { normalizeBatchCode } from "@/lib/claimableBatch";
 import { isClaimableSchemaError, CLAIMABLE_SCHEMA_MESSAGE } from "@/lib/dbSchema";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -21,11 +22,11 @@ export async function joinClaimableBatch(formData: FormData) {
 
   const { userId } = await auth();
   if (!userId) {
-    joinBatchRedirect(batchCode, "unauthorized");
+    joinBatchRedirect(toPublicBatchCode(batchCode), "unauthorized");
   }
 
   if (!batchId || !orgId) {
-    joinBatchRedirect(batchCode, "not_found");
+    joinBatchRedirect(toPublicBatchCode(batchCode), "not_found");
   }
 
   const supabase = supabaseAdmin();
@@ -38,12 +39,12 @@ export async function joinClaimableBatch(formData: FormData) {
     .maybeSingle();
 
   if (batchErr) {
-    if (isClaimableSchemaError(batchErr)) joinBatchRedirect(batchCode, "schema");
-    joinBatchRedirect(batchCode, "not_found");
+    if (isClaimableSchemaError(batchErr)) joinBatchRedirect(toPublicBatchCode(batchCode), "schema");
+    joinBatchRedirect(toPublicBatchCode(batchCode), "not_found");
   }
-  if (!batchBase) joinBatchRedirect(batchCode, "not_found");
+  if (!batchBase) joinBatchRedirect(toPublicBatchCode(batchCode), "not_found");
 
-  const redirectCode = batchCode || batchBase.batch_code || "";
+  const redirectCode = toPublicBatchCode(batchCode || batchBase.batch_code || "");
 
   if (batchBase.batch_type !== "claimable") {
     joinBatchRedirect(redirectCode, "not_claimable");

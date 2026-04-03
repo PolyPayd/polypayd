@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { formatExpiryDateTime, formatExpiryTimeLeft } from "@/lib/formatExpiry";
+import { formatBatchCodeForDisplay } from "@/lib/batchCodePublic";
 import { getClaimableBatchInfo, normalizeBatchCode } from "@/lib/claimableBatch";
 import { CLAIMABLE_SCHEMA_MESSAGE } from "@/lib/dbSchema";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -138,8 +139,8 @@ export default async function JoinBatchPage({
                     <dd className="font-medium text-neutral-200">{batch.name ?? "—"}</dd>
                   </div>
                   <div>
-                    <dt className="text-neutral-500">Batch code</dt>
-                    <dd className="font-mono text-neutral-300">{batch.batch_code ?? "—"}</dd>
+                    <dt className="text-neutral-500">Invite code</dt>
+                    <dd className="font-mono text-neutral-300">{formatBatchCodeForDisplay(batch.batch_code ?? code)}</dd>
                   </div>
                   {(nextClaimAmount != null && nextClaimAmount > 0) && (
                     <div>

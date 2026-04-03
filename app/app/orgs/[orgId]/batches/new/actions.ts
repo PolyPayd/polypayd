@@ -8,12 +8,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const UPPER_ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-function generateClaimableBatchCode(): string {
+function randomBatchSuffix(): string {
   let suffix = "";
   for (let i = 0; i < 6; i++) {
     suffix += UPPER_ALPHA[Math.floor(Math.random() * UPPER_ALPHA.length)];
   }
-  return `JOIN-${suffix}`;
+  return suffix;
+}
+
+/** Stored claim code for new claimable batches (PolyPayd-branded). Legacy rows may still use JOIN-. */
+function generateClaimableBatchCode(): string {
+  return `PPD-${randomBatchSuffix()}`;
 }
 
 async function generateUniqueBatchCode(
@@ -22,10 +27,12 @@ async function generateUniqueBatchCode(
 ): Promise<string> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const code = generateClaimableBatchCode();
+    const suffix = code.startsWith("PPD-") ? code.slice(4) : code;
+    const legacyTwin = `JOIN-${suffix}`;
     const { data: existing } = await supabase
       .from("batches")
       .select("id")
-      .eq("batch_code", code)
+      .in("batch_code", [code, legacyTwin])
       .maybeSingle();
     if (!existing) return code;
   }
