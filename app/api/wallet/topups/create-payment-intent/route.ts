@@ -123,11 +123,16 @@ export async function POST(req: Request) {
       org_id: orgId,
       wallet_id: wallet.id,
       wallet_currency: "GBP",
+      currency: "GBP",
+      type: "wallet_topup",
       topup_type: "wallet_credit",
       topup_funding_model: "connected",
       stripe_connect_account_id: stripeAccountId,
       wallet_credit_minor: String(pricing.walletCreditMinor),
+      platform_fee_minor: String(pricing.platformFeeMinor),
+      stripe_cost_estimate_minor: String(pricing.stripeCostEstimateMinor),
       total_charge_minor: String(pricing.totalChargeMinor),
+      // Backward compatibility for older webhook parsers (same as stripe_cost_estimate_minor today).
       processing_fee_minor: String(pricing.processingFeeMinor),
     };
 
@@ -145,6 +150,8 @@ export async function POST(req: Request) {
       paymentIntentId: paymentIntent.id,
       stripeAccountId,
       walletCreditMinor: pricing.walletCreditMinor,
+      platformFeeMinor: pricing.platformFeeMinor,
+      stripeCostEstimateMinor: pricing.stripeCostEstimateMinor,
       processingFeeMinor: pricing.processingFeeMinor,
       totalChargeMinor: pricing.totalChargeMinor,
     });

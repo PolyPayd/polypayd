@@ -156,6 +156,15 @@ export function WithdrawTestPanel({
   const canSubmitWithdraw =
     hasConnectedBank && withdrawalEval.variant === "ready" && !loading;
 
+  const isZeroAvailable = availableToWithdrawGbp < 0.005;
+
+  const withdrawBlockedHint = (() => {
+    if (!hasConnectedBank) return "Connect your bank account to enable withdrawals.";
+    if (isZeroAvailable) return "There’s no available balance to withdraw. Pending funds will show above when they clear.";
+    if (withdrawalEval.variant === "empty") return "Enter how much you’d like to send to your bank.";
+    return null;
+  })();
+
   useEffect(() => {
     function openPanel() {
       setOpen(true);
@@ -333,9 +342,11 @@ export function WithdrawTestPanel({
           aria-controls="withdraw-funds-panel"
         >
           <div className="min-w-0 flex-1 space-y-2.5 pr-3 sm:pr-4">
-            <p className="text-base font-semibold leading-snug tracking-tight text-white">Withdraw funds</p>
+            <p className="text-base font-semibold leading-snug tracking-tight text-white">Withdraw to bank</p>
             <p className="max-w-lg text-sm leading-relaxed text-neutral-500">
-              Send available balance to your connected bank account
+              {isZeroAvailable
+                ? "When you have available balance, move it to your bank in a few steps."
+                : "Move cleared funds to your connected bank account."}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-4 sm:gap-5 sm:border-l sm:border-neutral-800/70 sm:pl-8">
@@ -346,6 +357,9 @@ export function WithdrawTestPanel({
               <p className="mt-1.5 text-lg font-semibold tabular-nums leading-none tracking-tight text-white sm:text-xl">
                 {formatMoneyGbp(availableToWithdrawGbp)}
               </p>
+              {isZeroAvailable && (
+                <p className="mt-2 text-[11px] leading-snug text-neutral-600 sm:text-xs">Nothing to withdraw yet</p>
+              )}
             </div>
             <span className="flex shrink-0 items-center justify-center pl-0.5 text-neutral-400">
               <AccordionChevron expanded={false} />
@@ -361,10 +375,12 @@ export function WithdrawTestPanel({
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800/80 pb-5">
         <div className="min-w-0 flex-1">
           <h2 id="withdraw-funds-heading" className="text-lg font-semibold tracking-tight text-white">
-            Withdraw funds
+            Withdraw to bank
           </h2>
           <p className="mt-1.5 text-sm leading-relaxed text-neutral-500">
-            Send available balance to your connected bank account
+            {isZeroAvailable
+              ? "You’ll be able to withdraw as soon as funds move from pending to available."
+              : "Transfers use your connected bank on file with Stripe."}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
@@ -387,21 +403,26 @@ export function WithdrawTestPanel({
         </div>
       </header>
 
-      <div className="mb-6 flex flex-col gap-4 rounded-xl border border-neutral-800/80 bg-neutral-950/45 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3 min-w-0">
+      <div className="mb-8 flex flex-col gap-5 rounded-xl border border-neutral-800/80 bg-neutral-950/50 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-4 min-w-0">
           <span
-            className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${hasConnectedBank ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.45)]" : "bg-amber-400/90 shadow-[0_0_8px_rgba(251,191,36,0.35)]"}`}
+            className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${hasConnectedBank ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.4)]" : "bg-amber-400/90 shadow-[0_0_10px_rgba(251,191,36,0.35)]"}`}
             aria-hidden
           />
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
-              Bank connection
+              Payout destination
             </p>
-            <p className="mt-1 text-sm font-medium text-neutral-100">
-              {hasConnectedBank ? "Bank account connected" : "No bank account linked"}
+            <p className="mt-1.5 text-sm font-semibold text-white">
+              {hasConnectedBank ? "Bank linked" : "Bank not connected"}
             </p>
             {!hasConnectedBank && (
-              <p className="mt-0.5 text-xs text-neutral-500">Connect a bank to receive withdrawals.</p>
+              <p className="mt-1 text-xs text-neutral-500 leading-relaxed max-w-md">
+                Stripe holds your bank details securely. Connect once to receive withdrawals from PolyPayd.
+              </p>
+            )}
+            {hasConnectedBank && (
+              <p className="mt-1 text-xs text-neutral-500">You’re set up to receive withdrawals.</p>
             )}
           </div>
         </div>
@@ -409,9 +430,9 @@ export function WithdrawTestPanel({
           type="button"
           onClick={handleConnectBank}
           disabled={connectLoading}
-          className="shrink-0 rounded-lg border border-neutral-600 bg-transparent px-4 py-2.5 text-sm font-medium text-neutral-200 transition-colors hover:border-neutral-500 hover:bg-neutral-800/50 hover:text-white disabled:opacity-50"
+          className="shrink-0 rounded-xl border border-neutral-600 bg-neutral-900/40 px-5 py-3 text-sm font-semibold text-neutral-100 transition-colors hover:border-neutral-500 hover:bg-neutral-800/60 hover:text-white disabled:opacity-50 w-full sm:w-auto"
         >
-          {connectLoading ? "Opening secure setup…" : "Connect bank account"}
+          {connectLoading ? "Opening secure setup…" : hasConnectedBank ? "Update bank details" : "Connect bank account"}
         </button>
       </div>
 
@@ -424,7 +445,7 @@ export function WithdrawTestPanel({
         </div>
       )}
 
-      <div className="mb-6">
+      <div className="mb-8 rounded-xl border border-neutral-800/60 bg-neutral-950/30 px-5 py-5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
           Available to withdraw
         </p>
@@ -432,17 +453,20 @@ export function WithdrawTestPanel({
           {formatMoneyGbp(availableToWithdrawGbp)}
         </p>
         {pendingNote ? (
-          <p className="mt-2 max-w-md text-xs leading-relaxed text-neutral-500">{pendingNote}</p>
+          <p className="mt-3 max-w-lg text-sm leading-relaxed text-neutral-500">{pendingNote}</p>
         ) : (
-          <p className="mt-2 text-xs text-neutral-600">Only available balance can be withdrawn.</p>
+          <p className="mt-3 text-sm text-neutral-600 leading-relaxed">
+            Only cleared, available balance can be sent to your bank—not pending top-ups.
+          </p>
         )}
       </div>
 
-      <form onSubmit={handleWithdraw} className="space-y-4">
+      <form onSubmit={handleWithdraw} className="space-y-5">
         <div>
-          <label htmlFor="withdraw-amount" className="mb-2 block text-sm font-medium text-neutral-300">
-            Withdrawal amount
+          <label htmlFor="withdraw-amount" className="mb-2 block text-sm font-semibold text-neutral-200">
+            Amount
           </label>
+          <p className="text-xs text-neutral-500 mb-3">Enter the amount to send. Fees are shown before you confirm.</p>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
             <input
               id="withdraw-amount"
@@ -455,11 +479,13 @@ export function WithdrawTestPanel({
                 setWithdrawalError(null);
               }}
               aria-invalid={withdrawInputInvalid}
-              aria-describedby={withdrawInputInvalid ? "withdraw-amount-feedback" : undefined}
-              className={`min-h-[48px] w-full flex-1 rounded-xl border bg-neutral-950/60 px-4 py-3 text-base text-white tabular-nums placeholder:text-neutral-600 outline-none transition-[border,box-shadow] focus:ring-1 focus:ring-neutral-500/30 ${
+              aria-describedby={
+                withdrawInputInvalid ? "withdraw-amount-feedback" : withdrawBlockedHint ? "withdraw-blocked-hint" : undefined
+              }
+              className={`min-h-[52px] w-full flex-1 rounded-xl border bg-neutral-950/60 px-4 py-3 text-lg text-white tabular-nums placeholder:text-neutral-600 outline-none transition-[border,box-shadow] focus:ring-2 focus:ring-emerald-500/20 ${
                 withdrawInputInvalid
                   ? "border-red-500/50 focus:border-red-400/70"
-                  : "border-neutral-700/90 focus:border-neutral-500"
+                  : "border-neutral-700/90 focus:border-emerald-600/50"
               }`}
               placeholder="0.00"
               disabled={loading}
@@ -467,11 +493,16 @@ export function WithdrawTestPanel({
             <button
               type="submit"
               disabled={!canSubmitWithdraw}
-              className="min-h-[48px] shrink-0 rounded-xl bg-neutral-100 px-6 py-3 text-sm font-semibold text-neutral-950 shadow-sm transition-colors hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed sm:min-w-[180px]"
+              className="min-h-[52px] shrink-0 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-neutral-950 shadow-sm transition-colors hover:bg-neutral-100 disabled:opacity-40 disabled:cursor-not-allowed sm:min-w-[188px]"
             >
               {loading ? "Processing…" : "Withdraw to bank"}
             </button>
           </div>
+          {withdrawBlockedHint && !withdrawInputInvalid && (
+            <p id="withdraw-blocked-hint" className="mt-3 text-sm text-neutral-500 leading-relaxed">
+              {withdrawBlockedHint}
+            </p>
+          )}
           {withdrawInputInvalid && (
             <div
               id="withdraw-amount-feedback"

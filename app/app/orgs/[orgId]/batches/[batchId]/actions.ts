@@ -452,8 +452,17 @@ export async function lockAllocations(
   if (batch.allocations_locked_at) return { error: "Allocations are already locked." };
 
   const status = String(batch.status ?? "").toLowerCase();
-  if (status === "processing" || status === "completed" || status === "completed_with_errors") {
-    return { error: "Cannot lock allocations for a batch that is already processing or completed." };
+  if (
+    status === "processing" ||
+    status === "completed" ||
+    status === "completed_with_errors" ||
+    status === "funded" ||
+    status === "claiming"
+  ) {
+    return {
+      error:
+        "Cannot lock allocations for a batch that is already processing, funded, claiming, or completed.",
+    };
   }
 
   const rawAlloc = (formData.get("claimAllocations") ?? "").toString().trim();
@@ -556,8 +565,17 @@ export async function unlockAllocations(
   if (!batch.allocations_locked_at) return { error: "Allocations are not locked." };
 
   const status = String(batch.status ?? "").toLowerCase();
-  if (status === "processing" || status === "completed" || status === "completed_with_errors") {
-    return { error: "Cannot unlock allocations for a batch that is already processing or completed." };
+  if (
+    status === "processing" ||
+    status === "completed" ||
+    status === "completed_with_errors" ||
+    status === "funded" ||
+    status === "claiming"
+  ) {
+    return {
+      error:
+        "Cannot unlock allocations for a batch that is already processing, funded, claiming, or completed.",
+    };
   }
 
   const { error: updateErr } = await supabase
@@ -615,6 +633,12 @@ export async function sendClaimablePayouts(
   if (!batch.allocations_locked_at) return { error: "Allocations must be finalized before sending payouts." };
 
   const status = String(batch.status ?? "").toLowerCase();
+  if (status === "funded" || status === "claiming") {
+    return {
+      error:
+        "This batch was funded for per-recipient wallet claims. Recipients should use their claim links instead of legacy Send payouts.",
+    };
+  }
   if (status === "completed" || status === "completed_with_errors") {
     return { error: "Payouts have already been sent or are in progress." };
   }

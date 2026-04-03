@@ -8,7 +8,7 @@ import { ApproveBatchButton } from "./ApproveBatchButton";
 import { ClaimableBatchShare } from "./ClaimableBatchShare";
 import { ClaimablePayoutEditor } from "./ClaimablePayoutEditor";
 import { CsvUploadForm } from "./CsvUploadForm";
-import { SendClaimablePayoutsButton } from "./SendClaimablePayoutsButton";
+import { FundBatchFromWalletButton } from "./FundBatchFromWalletButton";
 import { UnlockAllocationsButton } from "./UnlockAllocationsButton";
 import { DownloadResultsButton } from "./DownloadResultsButton";
 import { RetryFailedButton } from "./RetryFailedButton";
@@ -16,6 +16,8 @@ import { ReplaceCsvButton } from "./ReplaceCsvButton";
 import { RunBatchButton } from "./RunBatchButton";
 import { UploadCsvButton } from "./UploadCsvButton";
 import { ImpactQueryToast } from "@/components/impact/ImpactQueryToast";
+import { fetchClerkRecipientProfiles } from "@/lib/clerkUserDisplay";
+import { formatRecipientLifecycleLabel, resolveRecipientDisplay } from "@/lib/recipientDisplay";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,21 @@ function clsx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
 
+function recipientLifecyclePill(status?: string | null) {
+  const s = (status ?? "").toLowerCase();
+  const base = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border";
+  if (s === "claimed" || s === "paid_out") {
+    return clsx(base, "border-emerald-800/60 text-emerald-200/90 bg-emerald-950/25");
+  }
+  if (s === "claimable" || s === "pending") {
+    return clsx(base, "border-amber-800/50 text-amber-200/90 bg-amber-950/20");
+  }
+  if (s === "failed") {
+    return clsx(base, "border-red-800/50 text-red-200/90 bg-red-950/20");
+  }
+  return clsx(base, "border-neutral-700 text-neutral-400 bg-neutral-900/20");
+}
+
 function statusBadge(status?: string | null) {
   const s = (status ?? "unknown").toLowerCase();
   const base = "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border";
@@ -46,6 +63,8 @@ function statusBadge(status?: string | null) {
   if (s === "draft") return clsx(base, "border-neutral-700 text-neutral-200 bg-neutral-900/30");
   if (s === "ready") return clsx(base, "border-blue-700 text-blue-200 bg-blue-900/20");
   if (s === "processing") return clsx(base, "border-yellow-700 text-yellow-200 bg-yellow-900/20");
+  if (s === "funded") return clsx(base, "border-sky-700 text-sky-200 bg-sky-900/20");
+  if (s === "claiming") return clsx(base, "border-violet-700 text-violet-200 bg-violet-900/20");
   if (s === "completed") return clsx(base, "border-emerald-700 text-emerald-200 bg-emerald-900/20");
   if (s === "failed") return clsx(base, "border-red-700 text-red-200 bg-red-900/20");
 
@@ -162,40 +181,76 @@ export default async function BatchDetailsPage({
     id: string;
     user_id: string;
     polypayd_username: string | null;
+    recipient_display_name: string | null;
+    recipient_email: string | null;
     claim_amount: number;
     payout_status?: string | null;
     paid_at?: string | null;
     failure_reason?: string | null;
+    claim_token?: string | null;
+    recipient_lifecycle_status?: string | null;
+    display_primary: string;
+    display_subtext?: string | undefined;
   }> = [];
+  let recipientProfiles = new Map<string, { displayName: string; primaryEmail: string | null }>();
   if (isClaimable) {
     const baseSelect = "id, user_id, polypayd_username, claim_amount";
-    const extendedSelect = "id, user_id, polypayd_username, claim_amount, payout_status, paid_at, failure_reason";
+    const extendedSelect =
+      "id, user_id, polypayd_username, claim_amount, payout_status, paid_at, failure_reason, claim_token, recipient_lifecycle_status";
+    const extendedSelectWithRecipient = `${extendedSelect}, recipient_display_name, recipient_email`;
     let claimsRows: Array<Record<string, unknown>> | null = null;
-    const { data: extendedRows, error: extendedErr } = await supabase
-      .from("batch_claims")
-      .select(extendedSelect)
-      .eq("batch_id", batchId)
-      .order("created_at", { ascending: true });
-    if (!extendedErr && extendedRows?.length !== undefined) {
-      claimsRows = extendedRows as Array<Record<string, unknown>>;
+
+    const claimsQuery = (sel: string) =>
+      supabase.from("batch_claims").select(sel).eq("batch_id", batchId).order("created_at", { ascending: true });
+
+    const withRecipientRes = await claimsQuery(extendedSelectWithRecipient);
+    if (!withRecipientRes.error && withRecipientRes.data) {
+      claimsRows = withRecipientRes.data as unknown as Array<Record<string, unknown>>;
     } else {
-      const { data: baseRows, error: baseErr } = await supabase
-        .from("batch_claims")
-        .select(baseSelect)
-        .eq("batch_id", batchId)
-        .order("created_at", { ascending: true });
-      if (!baseErr && baseRows) claimsRows = baseRows as Array<Record<string, unknown>>;
+      const extendedRes = await claimsQuery(extendedSelect);
+      if (!extendedRes.error && extendedRes.data) {
+        claimsRows = extendedRes.data as unknown as Array<Record<string, unknown>>;
+      } else {
+        const baseRes = await claimsQuery(baseSelect);
+        if (!baseRes.error && baseRes.data) {
+          claimsRows = baseRes.data as unknown as Array<Record<string, unknown>>;
+        }
+      }
     }
     if (claimsRows) {
-      claimableClaims = claimsRows.map((c) => ({
-        id: String(c.id ?? ""),
-        user_id: String(c.user_id ?? ""),
-        polypayd_username: (c.polypayd_username as string | null) ?? null,
-        claim_amount: Number(c.claim_amount ?? 0),
-        payout_status: (c.payout_status as string | null) ?? null,
-        paid_at: (c.paid_at as string | null) ?? null,
-        failure_reason: (c.failure_reason as string | null) ?? null,
-      }));
+      const recipientClerkIds = [
+        ...new Set([
+          ...claimsRows.map((c) => String(c.user_id ?? "")),
+          ...claimSlots.flatMap((s) => (s.claimed_by_user_id ? [s.claimed_by_user_id] : [])),
+        ]),
+      ];
+      recipientProfiles =
+        recipientClerkIds.length > 0 ? await fetchClerkRecipientProfiles(recipientClerkIds) : new Map();
+
+      claimableClaims = claimsRows.map((c) => {
+        const user_id = String(c.user_id ?? "");
+        const base = {
+          id: String(c.id ?? ""),
+          user_id,
+          polypayd_username: (c.polypayd_username as string | null) ?? null,
+          recipient_display_name: (c.recipient_display_name as string | null) ?? null,
+          recipient_email: (c.recipient_email as string | null) ?? null,
+          claim_amount: Number(c.claim_amount ?? 0),
+          payout_status: (c.payout_status as string | null) ?? null,
+          paid_at: (c.paid_at as string | null) ?? null,
+          failure_reason: (c.failure_reason as string | null) ?? null,
+          claim_token: (c.claim_token as string | null) ?? null,
+          recipient_lifecycle_status: (c.recipient_lifecycle_status as string | null) ?? null,
+        };
+        const r = resolveRecipientDisplay({
+          clerkUserId: user_id,
+          polypaydUsername: base.polypayd_username,
+          recipientDisplayName: base.recipient_display_name,
+          recipientEmail: base.recipient_email,
+          clerkProfile: recipientProfiles.get(user_id),
+        });
+        return { ...base, display_primary: r.primary, display_subtext: r.subtext };
+      });
     }
   }
 
@@ -217,10 +272,20 @@ export default async function BatchDetailsPage({
 
   const claimablePayoutStats = isClaimable
     ? {
-        paidCount: claimableClaims.filter((c) => c.payout_status === "paid").length,
+        paidCount: claimableClaims.filter(
+          (c) =>
+            c.payout_status === "paid" ||
+            c.recipient_lifecycle_status === "claimed" ||
+            c.recipient_lifecycle_status === "paid_out"
+        ).length,
         failedCount: claimableClaims.filter((c) => c.payout_status === "failed").length,
         paidAmount: claimableClaims
-          .filter((c) => c.payout_status === "paid")
+          .filter(
+            (c) =>
+              c.payout_status === "paid" ||
+              c.recipient_lifecycle_status === "claimed" ||
+              c.recipient_lifecycle_status === "paid_out"
+          )
           .reduce((s, c) => s + c.claim_amount, 0),
         failedAmount: claimableClaims
           .filter((c) => c.payout_status === "failed")
@@ -235,10 +300,12 @@ export default async function BatchDetailsPage({
     allocationsLocked &&
     batchStatus !== "completed" &&
     batchStatus !== "completed_with_errors" &&
+    batchStatus !== "funded" &&
+    batchStatus !== "claiming" &&
     canPerformActions &&
     claimableClaims.length >= 1 &&
     Math.abs(claimableClaims.reduce((s, c) => s + c.claim_amount, 0) - Number(batch.total_amount ?? 0)) < 0.01;
-  // Include status "processing" so stuck batches (e.g. after RPC was missing) can retry Send payouts.
+  // Fund-from-wallet replaces legacy one-shot Send for new claimable batches (per-recipient claim links after fund).
 
   // 2) Uploads (for tab + latest)
   const { data: uploads, error: uploadsErr } = await supabase
@@ -531,22 +598,29 @@ export default async function BatchDetailsPage({
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
         {isClaimable ? (
           <>
-            <div className="rounded-xl border border-neutral-800 p-4">
-              <div className="text-sm text-neutral-400">Total amount</div>
-              <div className="text-2xl font-semibold">{moneyGBP(batch.total_amount)}</div>
+            <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/30 p-5 sm:p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
+              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">Payout pool</div>
+              <div className="text-2xl sm:text-3xl font-semibold tabular-nums text-white tracking-tight">
+                {moneyGBP(batch.total_amount)}
+              </div>
+              <p className="text-xs text-neutral-500 mt-2 leading-relaxed">Total funded for this Claim Link batch.</p>
             </div>
-            <div className="rounded-xl border border-neutral-800 p-4">
-              <div className="text-sm text-neutral-400">Joined recipients</div>
-              <div className="text-2xl font-semibold">{batch.recipient_count ?? 0}</div>
+            <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/30 p-5 sm:p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
+              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">Joined</div>
+              <div className="text-2xl sm:text-3xl font-semibold tabular-nums text-white tracking-tight">
+                {batch.recipient_count ?? 0}
+              </div>
+              <p className="text-xs text-neutral-500 mt-2 leading-relaxed">Recipients who have claimed a slot or joined.</p>
             </div>
-            <div className="rounded-xl border border-neutral-800 p-4">
-              <div className="text-sm text-neutral-400">Created</div>
-              <div className="text-base font-medium">
+            <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/30 p-5 sm:p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
+              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">Created</div>
+              <div className="text-base font-medium text-neutral-100">
                 {batch.created_at ? new Date(batch.created_at).toLocaleString("en-GB") : "—"}
               </div>
+              <p className="text-xs text-neutral-500 mt-2 leading-relaxed">Batch opened on this date.</p>
             </div>
           </>
         ) : (
@@ -571,9 +645,9 @@ export default async function BatchDetailsPage({
 
       {/* Claimable batch dashboard */}
       {isClaimable && batch.batch_code && (
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <h2 className="text-sm font-medium text-neutral-400">{payoutKindLabel}</h2>
+        <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/35 p-5 sm:p-7 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <h2 className="text-base font-semibold text-white tracking-tight">{payoutKindLabel}</h2>
             {allocationsLocked && (
               <span className={clsx(
                 "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border",
@@ -599,7 +673,7 @@ export default async function BatchDetailsPage({
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <ClaimableBatchShare batchCode={batch.batch_code} />
             {claimableSendEligible && (
-              <SendClaimablePayoutsButton
+              <FundBatchFromWalletButton
                 orgId={batch.org_id}
                 batchId={batch.id}
                 poolTotalGbp={Number(batch.total_amount ?? 0)}
@@ -608,44 +682,62 @@ export default async function BatchDetailsPage({
           </div>
           {claimablePayoutStats && (batch.status === "completed" || batch.status === "completed_with_errors") && (
             <div className={clsx(
-              "mb-4 rounded-xl border p-4",
+              "mb-6 rounded-xl border p-5",
               batch.status === "completed"
-                ? "border-emerald-800/50 bg-emerald-950/20"
-                : "border-amber-800/40 bg-amber-950/20"
+                ? "border-emerald-800/45 bg-emerald-950/25"
+                : "border-amber-800/45 bg-amber-950/20"
             )}>
-              <h3 className="text-sm font-medium text-neutral-300 mb-2">Payout results</h3>
-              <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                <div>
-                  <dt className="text-neutral-500">Paid recipients</dt>
-                  <dd className="font-medium text-emerald-200">{claimablePayoutStats.paidCount}</dd>
+              <h3 className="text-sm font-semibold text-white mb-1">Wallet credit results</h3>
+              <p className="text-xs text-neutral-500 mb-4 leading-relaxed">
+                Recipients who completed the claim flow and amounts credited (or attempted).
+              </p>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="rounded-lg border border-emerald-800/30 bg-neutral-950/30 px-3 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-200/70">Credited</p>
+                  <p className="mt-1 text-xl font-semibold tabular-nums text-emerald-100">{claimablePayoutStats.paidCount}</p>
+                  <p className="text-[11px] text-neutral-500 mt-0.5">recipients</p>
                 </div>
-                <div>
-                  <dt className="text-neutral-500">Paid amount</dt>
-                  <dd className="font-medium text-emerald-200">{moneyGBP(claimablePayoutStats.paidAmount)}</dd>
+                <div className="rounded-lg border border-emerald-800/30 bg-neutral-950/30 px-3 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-200/70">Credited</p>
+                  <p className="mt-1 text-xl font-semibold tabular-nums text-emerald-100">
+                    {moneyGBP(claimablePayoutStats.paidAmount)}
+                  </p>
+                  <p className="text-[11px] text-neutral-500 mt-0.5">total</p>
                 </div>
-                <div>
-                  <dt className="text-neutral-500">Failed recipients</dt>
-                  <dd className="font-medium text-amber-200">{claimablePayoutStats.failedCount}</dd>
+                <div className="rounded-lg border border-amber-800/35 bg-neutral-950/30 px-3 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-200/80">Did not complete</p>
+                  <p className="mt-1 text-xl font-semibold tabular-nums text-amber-100">{claimablePayoutStats.failedCount}</p>
+                  <p className="text-[11px] text-neutral-500 mt-0.5">recipients</p>
                 </div>
-                <div>
-                  <dt className="text-neutral-500">Failed amount</dt>
-                  <dd className="font-medium text-amber-200">{moneyGBP(claimablePayoutStats.failedAmount)}</dd>
+                <div className="rounded-lg border border-amber-800/35 bg-neutral-950/30 px-3 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-200/80">At risk</p>
+                  <p className="mt-1 text-xl font-semibold tabular-nums text-amber-100">
+                    {moneyGBP(claimablePayoutStats.failedAmount)}
+                  </p>
+                  <p className="text-[11px] text-neutral-500 mt-0.5">amount</p>
                 </div>
-              </dl>
+              </div>
+              {claimablePayoutStats.failedCount === 0 && (
+                <p className="mt-3 text-xs text-neutral-500">No failed wallet credits for this batch.</p>
+              )}
             </div>
           )}
-          <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-sm">
-            <div>
-              <dt className="text-neutral-500">Total amount</dt>
-              <dd className="font-medium text-neutral-200">{moneyGBP(batch.total_amount)}</dd>
+          <div className="mb-2">
+            <h3 className="text-sm font-semibold text-neutral-200">Campaign details</h3>
+            <p className="text-xs text-neutral-500 mt-1">Pool, limits, and timing for this Claim Link.</p>
+          </div>
+          <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 text-sm">
+            <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
+              <dt className="text-xs text-neutral-500">Pool total</dt>
+              <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">{moneyGBP(batch.total_amount)}</dd>
             </div>
-            <div>
-              <dt className="text-neutral-500">Joined recipients</dt>
-              <dd className="font-medium text-neutral-200">{batch.recipient_count ?? 0}</dd>
+            <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
+              <dt className="text-xs text-neutral-500">Joined recipients</dt>
+              <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">{batch.recipient_count ?? 0}</dd>
             </div>
-            <div>
-              <dt className="text-neutral-500">Max recipients</dt>
-              <dd className="font-medium text-neutral-200">{batch.max_claims ?? "—"}</dd>
+            <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
+              <dt className="text-xs text-neutral-500">Recipient cap</dt>
+              <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">{batch.max_claims ?? "—"}</dd>
             </div>
             {(() => {
               const amounts = claimableClaims.map((c) => c.claim_amount);
@@ -658,13 +750,15 @@ export default async function BatchDetailsPage({
               if (hasClaims && !allEqual) {
                 return (
                   <>
-                    <div>
-                      <dt className="text-neutral-500">Distribution</dt>
-                      <dd className="font-medium text-neutral-200">Customised</dd>
+                    <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
+                      <dt className="text-xs text-neutral-500">Allocation</dt>
+                      <dd className="font-semibold text-neutral-100 mt-0.5">Custom per recipient</dd>
                     </div>
-                    <div>
-                      <dt className="text-neutral-500">Payout range</dt>
-                      <dd className="font-medium text-neutral-200">{moneyGBP(minAmount)} to {moneyGBP(maxAmount)}</dd>
+                    <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
+                      <dt className="text-xs text-neutral-500">Per-recipient range</dt>
+                      <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">
+                        {moneyGBP(minAmount)} – {moneyGBP(maxAmount)}
+                      </dd>
                     </div>
                   </>
                 );
@@ -672,89 +766,128 @@ export default async function BatchDetailsPage({
               const displayAmount = hasClaims && allEqual ? amounts[0] : batch.amount_per_claim;
               if (displayAmount != null && Number(displayAmount) > 0) {
                 return (
-                  <div>
-                    <dt className="text-neutral-500">Amount per recipient</dt>
-                    <dd className="font-medium text-neutral-200">{moneyGBP(displayAmount)}</dd>
+                  <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
+                    <dt className="text-xs text-neutral-500">Default per recipient</dt>
+                    <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">{moneyGBP(displayAmount)}</dd>
                   </div>
                 );
               }
               return null;
             })()}
-            <div>
-              <dt className="text-neutral-500">Expires</dt>
-              <dd className="text-neutral-200">
-                {formatExpiryDateTime(batch.expires_at)}
-              </dd>
+            <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3 sm:col-span-2 lg:col-span-1">
+              <dt className="text-xs text-neutral-500">Link expires</dt>
+              <dd className="font-medium text-neutral-100 mt-0.5">{formatExpiryDateTime(batch.expires_at)}</dd>
               {batch.expires_at && (
                 <>
-                  <dd className="text-xs text-neutral-500 mt-0.5">Timezone: Local time</dd>
-                  <dd className="text-xs text-neutral-400 mt-0.5">
-                    Time left: {formatExpiryTimeLeft(batch.expires_at)}
-                  </dd>
+                  <dd className="text-xs text-neutral-500 mt-1">Your local time</dd>
+                  <dd className="text-xs text-neutral-400 mt-0.5">{formatExpiryTimeLeft(batch.expires_at)}</dd>
                 </>
               )}
             </div>
-            <div>
-              <dt className="text-neutral-500">Total claimed so far</dt>
-              <dd className="text-neutral-200">
+            <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
+              <dt className="text-xs text-neutral-500">Allocated so far</dt>
+              <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">
                 {hasSlots ? moneyGBP(totalClaimedFromSlots) : moneyGBP(totalClaimedFromClaims)}
               </dd>
             </div>
-            <div>
-              <dt className="text-neutral-500">Remaining pool</dt>
-              <dd className="text-neutral-200">
+            <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
+              <dt className="text-xs text-neutral-500">Unallocated pool</dt>
+              <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">
                 {moneyGBP(Math.max(0, Number(batch.total_amount ?? 0) - (hasSlots ? totalClaimedFromSlots : totalClaimedFromClaims)))}
               </dd>
             </div>
           </dl>
           {hasSlots && claimSlots.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-neutral-800">
-              <h3 className="text-sm font-medium text-neutral-400 mb-2">Joined recipients / claim status</h3>
-              <div className="overflow-x-auto">
+            <div className="mt-8 pt-6 border-t border-neutral-800/80">
+              <h3 className="text-sm font-semibold text-white mb-1">Slots</h3>
+              <p className="text-xs text-neutral-500 mb-4">Fixed places in this batch and who claimed each one.</p>
+              <div className="overflow-x-auto rounded-xl border border-neutral-800/70">
                 <table className="min-w-full text-sm">
-                  <thead className="text-neutral-500">
-                    <tr>
-                      <th className="text-left py-1.5 pr-3">Slot</th>
-                      <th className="text-left py-1.5 pr-3">Amount</th>
-                      <th className="text-left py-1.5 pr-3">Status</th>
-                      <th className="text-left py-1.5">Claimed by</th>
+                  <thead>
+                    <tr className="border-b border-neutral-800 bg-neutral-900/80">
+                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        #
+                      </th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        Amount
+                      </th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        Status
+                      </th>
+                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        Recipient
+                      </th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {claimSlots.map((slot) => (
-                      <tr key={slot.id} className="border-t border-neutral-800">
-                        <td className="py-1.5 pr-3 text-neutral-300">{slot.slot_index + 1}</td>
-                        <td className="py-1.5 pr-3">{moneyGBP(slot.amount)}</td>
-                        <td className="py-1.5 pr-3">
-                          <span className={slot.status === "claimed" ? "text-amber-300" : "text-emerald-300"}>
-                            {slot.status === "claimed" ? "Claimed" : "Open"}
-                          </span>
-                        </td>
-                        <td className="py-1.5 text-neutral-400 font-mono text-xs">
-                          {slot.status === "claimed" && slot.claimed_by_user_id ? slot.claimed_by_user_id : "—"}
-                        </td>
-                      </tr>
-                    ))}
+                  <tbody className="divide-y divide-neutral-800/80">
+                    {claimSlots.map((slot) => {
+                      const claimedBy =
+                        slot.status === "claimed" && slot.claimed_by_user_id
+                          ? (() => {
+                              const match = claimableClaims.find((c) => c.user_id === slot.claimed_by_user_id);
+                              if (match) {
+                                return { primary: match.display_primary, subtext: match.display_subtext };
+                              }
+                              return resolveRecipientDisplay({
+                                clerkUserId: slot.claimed_by_user_id,
+                                polypaydUsername: null,
+                                recipientDisplayName: null,
+                                recipientEmail: null,
+                                clerkProfile: recipientProfiles.get(slot.claimed_by_user_id),
+                              });
+                            })()
+                          : null;
+                      return (
+                        <tr key={slot.id} className="bg-neutral-950/20">
+                          <td className="py-3.5 px-4 text-neutral-400 tabular-nums">{slot.slot_index + 1}</td>
+                          <td className="py-3.5 px-4 font-medium tabular-nums text-neutral-100">{moneyGBP(slot.amount)}</td>
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={clsx(
+                                "inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                                slot.status === "claimed"
+                                  ? "border-amber-800/50 text-amber-200 bg-amber-950/30"
+                                  : "border-emerald-800/45 text-emerald-200 bg-emerald-950/25"
+                              )}
+                            >
+                              {slot.status === "claimed" ? "Claimed" : "Open"}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-neutral-200 text-sm">
+                            {claimedBy ? (
+                              <div>
+                                <div>{claimedBy.primary}</div>
+                                {claimedBy.subtext ? (
+                                  <div className="text-xs text-neutral-500 mt-0.5">{claimedBy.subtext}</div>
+                                ) : null}
+                              </div>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </div>
           )}
           {(hasSlots ? claimSlots.length > 0 : typeof batch.max_claims === "number" && batch.max_claims > 0) && (
-            <div className="mt-4 pt-4 border-t border-neutral-800">
-              <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-neutral-400">Claim progress</span>
-                <span className="text-neutral-200">
+            <div className="mt-8 pt-6 border-t border-neutral-800/80">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between mb-3">
+                <span className="text-sm font-semibold text-white">Fill rate</span>
+                <span className="text-sm tabular-nums text-neutral-400">
                   {hasSlots
-                    ? `${claimSlots.filter((s) => s.status === "claimed").length} / ${claimSlots.length} claimed`
-                    : `${batch.recipient_count ?? 0} / ${batch.max_claims} claimed`}
+                    ? `${claimSlots.filter((s) => s.status === "claimed").length} of ${claimSlots.length} slots claimed`
+                    : `${batch.recipient_count ?? 0} of ${batch.max_claims} recipients joined`}
                 </span>
               </div>
-              <div className="h-2 rounded-full bg-neutral-800 overflow-hidden">
+              <div className="h-2.5 rounded-full bg-neutral-800/90 overflow-hidden ring-1 ring-white/5">
                 <div
                   className={clsx(
-                    "h-full rounded-full transition-all",
-                    claimableFull ? "bg-amber-600" : "bg-emerald-600"
+                    "h-full rounded-full transition-all duration-500 ease-out",
+                    claimableFull ? "bg-gradient-to-r from-amber-600 to-amber-500" : "bg-gradient-to-r from-emerald-700 to-emerald-500"
                   )}
                   style={{
                     width: hasSlots
@@ -763,11 +896,19 @@ export default async function BatchDetailsPage({
                   }}
                 />
               </div>
+              {claimableFull && (
+                <p className="mt-2 text-xs text-amber-200/80">This batch has reached its limit or expiry.</p>
+              )}
             </div>
           )}
-          <div className="mt-4 pt-4 border-t border-neutral-800">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <h3 className="text-sm font-medium text-neutral-400">Customise payouts</h3>
+          <div className="mt-8 pt-6 border-t border-neutral-800/80">
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+              <div>
+                <h3 className="text-sm font-semibold text-white">Per-recipient amounts</h3>
+                <p className="text-xs text-neutral-500 mt-1 max-w-md leading-relaxed">
+                  Adjust allocations before locking. Totals must match the pool.
+                </p>
+              </div>
               {allocationsLocked && canPerformActions && (
                 <UnlockAllocationsButton orgId={batch.org_id} batchId={batch.id} />
               )}
@@ -783,6 +924,65 @@ export default async function BatchDetailsPage({
               saveAction={updateClaimAmounts}
             />
           </div>
+          {(batchStatus === "funded" || batchStatus === "claiming") && canPerformActions && (
+            <div className="mt-8 pt-6 border-t border-neutral-800/80">
+              <h3 className="text-sm font-semibold text-white mb-1">Private claim links</h3>
+              <p className="text-xs text-neutral-500 mb-4 max-w-2xl leading-relaxed">
+                Send each link only to the matching person. They must use the same sign-in they used to join. Funds go to
+                their PolyPayd wallet (bank withdrawal is separate).
+              </p>
+              <div className="overflow-x-auto rounded-xl border border-neutral-800/70 text-sm">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b border-neutral-800 bg-neutral-900/80 text-left">
+                      <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        Recipient
+                      </th>
+                      <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        Amount
+                      </th>
+                      <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        Wallet
+                      </th>
+                      <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">Link</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-800/80">
+                    {claimableClaims.map((c) => (
+                      <tr key={c.id} className="bg-neutral-950/20">
+                        <td className="py-3.5 px-4 align-top min-w-[140px]">
+                          <div className="text-neutral-100 text-sm font-medium">{c.display_primary}</div>
+                          {c.display_subtext ? (
+                            <div className="text-xs text-neutral-500 mt-1">{c.display_subtext}</div>
+                          ) : null}
+                        </td>
+                        <td className="py-3.5 px-4 align-top font-medium tabular-nums text-neutral-100 whitespace-nowrap">
+                          {moneyGBP(c.claim_amount)}
+                        </td>
+                        <td className="py-3.5 px-4 align-top">
+                          <span className={recipientLifecyclePill(c.recipient_lifecycle_status)}>
+                            {formatRecipientLifecycleLabel(c.recipient_lifecycle_status)}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 align-top whitespace-nowrap">
+                          {c.claim_token ? (
+                            <Link
+                              href={`/app/claim-payout/${c.claim_token}`}
+                              className="text-sm font-medium text-sky-400 hover:text-sky-300 transition-colors"
+                            >
+                              Open claim page
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-neutral-600">Preparing…</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
           {!claimableSchemaReady && (
             <p className="mt-4 text-xs text-amber-600/90">Admin: {CLAIMABLE_SCHEMA_MESSAGE}</p>
           )}

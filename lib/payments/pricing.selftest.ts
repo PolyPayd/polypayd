@@ -10,6 +10,8 @@ import {
 const t = calculateTopupChargeFromWalletCredit(1000);
 assert.equal(t.walletCreditMinor, 1000);
 assert.equal(t.processingFeeMinor, 30);
+assert.equal(t.stripeCostEstimateMinor, 30);
+assert.equal(t.platformFeeMinor, 0);
 assert.equal(t.totalChargeMinor, 1030);
 
 const p = calculatePayoutPricing(1000);

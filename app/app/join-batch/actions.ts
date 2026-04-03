@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { normalizeBatchCode } from "@/lib/claimableBatch";
 import { isClaimableSchemaError, CLAIMABLE_SCHEMA_MESSAGE } from "@/lib/dbSchema";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -136,15 +136,39 @@ export async function joinClaimableBatch(formData: FormData) {
     }
   }
 
+  const clerkProfile = await currentUser();
+  const fullName = [clerkProfile?.firstName, clerkProfile?.lastName].filter(Boolean).join(" ").trim();
+  const clerkUsername = clerkProfile?.username?.trim() ?? "";
+  const primaryEmail =
+    clerkProfile?.primaryEmailAddress?.emailAddress ??
+    clerkProfile?.emailAddresses?.[0]?.emailAddress ??
+    null;
+  const recipientDisplayName = fullName || clerkUsername || null;
+  const legacyHumanLabel = recipientDisplayName ?? primaryEmail ?? null;
+
   const insertPayload: Record<string, unknown> = {
     org_id: batch.org_id,
     batch_id: batch.id,
     user_id: userId,
-    polypayd_username: userId,
+    polypayd_username: legacyHumanLabel,
     claim_amount: claimAmount,
+    recipient_display_name: recipientDisplayName,
+    recipient_email: primaryEmail,
   };
   if (claimSlotId != null) insertPayload.claim_slot_id = claimSlotId;
-  const { error: claimErr } = await supabase.from("batch_claims").insert(insertPayload);
+
+  let claimErr = (await supabase.from("batch_claims").insert(insertPayload)).error;
+  if (claimErr && isClaimableSchemaError(claimErr)) {
+    const legacyOnly: Record<string, unknown> = {
+      org_id: batch.org_id,
+      batch_id: batch.id,
+      user_id: userId,
+      polypayd_username: legacyHumanLabel ?? userId,
+      claim_amount: claimAmount,
+    };
+    if (claimSlotId != null) legacyOnly.claim_slot_id = claimSlotId;
+    claimErr = (await supabase.from("batch_claims").insert(legacyOnly)).error;
+  }
 
   if (claimErr) {
     if (isClaimableSchemaError(claimErr)) joinBatchRedirect(redirectCode, "schema");

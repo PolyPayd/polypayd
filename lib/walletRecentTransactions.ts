@@ -132,6 +132,19 @@ export async function fetchWalletRecentTransactionRows(
       continue;
     }
 
+    if (refType === "claim_completed" && row.entry_type === "credit") {
+      out.push({
+        id: row.id,
+        date: row.created_at ?? "",
+        typeLabel: "Batch claim",
+        statusLabel: "Available",
+        statusVariant: "available",
+        entry_type: row.entry_type ?? "credit",
+        amount: num(row.amount),
+      });
+      continue;
+    }
+
     if (refType === "wallet_funding" && row.entry_type === "credit") {
       const tid = row.transaction_id;
       if (usedFundingTxnIds.has(tid)) {
@@ -188,6 +201,7 @@ export async function fetchWalletRecentTransactionRows(
 function mapLedgerReferenceType(refType: string): string {
   if (refType === "batch_run") return "Bulk Send";
   if (refType === "batch_payout") return "Claim Link Payout";
+  if (refType === "claim_completed") return "Batch claim";
   if (refType === "wallet_funding") return "Top-up";
   if (refType === "stripe_balance_available") return "Settlement sync";
   if (refType === "wallet_topup_instant_release") return "Top-up (release)";

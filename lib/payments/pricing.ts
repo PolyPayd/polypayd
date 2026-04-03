@@ -20,7 +20,12 @@ export const WITHDRAWAL_FEE_MIN_MINOR = 30;
 
 export type TopupChargeBreakdown = {
   walletCreditMinor: number;
+  /** @deprecated Use {@link stripeCostEstimateMinor} — this is the Stripe/card cost uplift only, not platform revenue. */
   processingFeeMinor: number;
+  /** PolyPayd platform revenue on top-up (currently zero; batch fees are separate). */
+  platformFeeMinor: number;
+  /** Estimated pass-through to cover Stripe/card costs (Connect `application_fee_amount`). */
+  stripeCostEstimateMinor: number;
   totalChargeMinor: number;
 };
 
@@ -69,9 +74,16 @@ export function calculateTopupChargeFromWalletCredit(walletCreditMinor: number):
   if (walletCreditMinor < 100) {
     throw new Error("walletCreditMinor must be at least 100 (minimum £1.00)");
   }
-  const processingFeeMinor = mulDivHalfUp(walletCreditMinor, TOPUP_PROCESSING_FEE_BPS, 10_000);
-  const totalChargeMinor = walletCreditMinor + processingFeeMinor;
-  return { walletCreditMinor, processingFeeMinor, totalChargeMinor };
+  const stripeCostEstimateMinor = mulDivHalfUp(walletCreditMinor, TOPUP_PROCESSING_FEE_BPS, 10_000);
+  const platformFeeMinor = 0;
+  const totalChargeMinor = walletCreditMinor + stripeCostEstimateMinor;
+  return {
+    walletCreditMinor,
+    processingFeeMinor: stripeCostEstimateMinor,
+    stripeCostEstimateMinor,
+    platformFeeMinor,
+    totalChargeMinor,
+  };
 }
 
 /** 1.5% of payout, rounded half-up to whole pence; total debit = payout + fee. */

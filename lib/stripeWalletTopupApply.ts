@@ -25,6 +25,15 @@ function parsePositiveInt(value: unknown): number | null {
   return null;
 }
 
+function parseNonNegativeInt(value: unknown): number | null {
+  if (typeof value === "number" && Number.isInteger(value) && value >= 0) return value;
+  if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    const n = parseInt(value, 10);
+    if (n >= 0) return n;
+  }
+  return null;
+}
+
 export type WalletTopupApplyError = { status: number; message: string };
 
 const TOPUP_APPLY_LOG = process.env.POLYPAYD_STRIPE_WEBHOOK_DEBUG === "1";
@@ -87,7 +96,10 @@ export async function applyStripeWalletTopupFromPaymentIntent(
 
   let walletCreditMinor: number;
   let stripeTotalChargedMinor: number | null;
+  /** Legacy RPC column: pass-through / non-wallet portion (see stripe cost estimate). */
   let processingFeeMinor: number | null;
+  let platformFeeMinor: number | null;
+  let stripeCostEstimateMinor: number | null;
 
   if (walletCreditMeta != null && totalChargeMeta != null) {
     if (grossMinor !== totalChargeMeta) {
@@ -115,9 +127,40 @@ export async function applyStripeWalletTopupFromPaymentIntent(
         error: { status: 400, message: "Invalid top-up metadata (total less than wallet credit)." },
       };
     }
+    const nonWalletMinor = totalChargeMeta - walletCreditMeta;
+    const platformFromMeta = parseNonNegativeInt(metadata.platform_fee_minor);
+    const platformPart = platformFromMeta ?? 0;
+    const stripeFromMeta =
+      parsePositiveInt(metadata.stripe_cost_estimate_minor) ??
+      parsePositiveInt(metadata.processing_fee_minor);
+    let stripePart: number;
+    if (stripeFromMeta != null) {
+      if (platformPart + stripeFromMeta !== nonWalletMinor) {
+        return {
+          data: null,
+          error: {
+            status: 400,
+            message:
+              "Top-up metadata breakdown invalid: wallet_credit_minor + platform_fee_minor + stripe_cost_estimate_minor must equal total_charge_minor.",
+          },
+        };
+      }
+      stripePart = stripeFromMeta;
+    } else {
+      stripePart = nonWalletMinor - platformPart;
+      if (stripePart < 0 || !Number.isFinite(stripePart)) {
+        return {
+          data: null,
+          error: { status: 400, message: "Invalid top-up fee metadata (platform fee exceeds non-wallet amount)." },
+        };
+      }
+    }
+
     walletCreditMinor = walletCreditMeta;
     stripeTotalChargedMinor = totalChargeMeta;
-    processingFeeMinor = totalChargeMeta - walletCreditMeta;
+    platformFeeMinor = platformPart;
+    stripeCostEstimateMinor = stripePart;
+    processingFeeMinor = stripePart;
   } else {
     const legacyTopup = parsePositiveInt(metadata.topup_amount_minor);
     if (legacyTopup != null && legacyTopup !== grossMinor) {
@@ -132,6 +175,8 @@ export async function applyStripeWalletTopupFromPaymentIntent(
     walletCreditMinor = grossMinor;
     stripeTotalChargedMinor = null;
     processingFeeMinor = null;
+    platformFeeMinor = null;
+    stripeCostEstimateMinor = null;
   }
 
   const pImmediateRelease = shouldImmediateReleaseWalletTopup(
@@ -179,6 +224,8 @@ export async function applyStripeWalletTopupFromPaymentIntent(
     p_stripe_total_charged_minor: stripeTotalChargedMinor,
     p_processing_fee_minor: processingFeeMinor,
     p_immediate_release: pImmediateRelease,
+    p_platform_fee_minor: platformFeeMinor,
+    p_stripe_cost_estimate_minor: stripeCostEstimateMinor,
   });
 
   if (error) {

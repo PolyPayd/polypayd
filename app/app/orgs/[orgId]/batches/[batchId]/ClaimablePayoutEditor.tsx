@@ -20,6 +20,8 @@ type ClaimRow = {
   user_id: string;
   polypayd_username: string | null;
   claim_amount: number;
+  display_primary: string;
+  display_subtext?: string | undefined;
 };
 
 type Props = {
@@ -162,32 +164,44 @@ export function ClaimablePayoutEditor({ claims, totalPool, currency = "GBP", can
 
   if (claims.length === 0) {
     return (
-      <p className="text-sm text-neutral-500">
-        No joined recipients yet. Amounts can be customised after recipients join.
-      </p>
+      <div className="rounded-xl border border-dashed border-neutral-800 bg-neutral-950/30 px-5 py-8 text-center">
+        <p className="text-sm font-medium text-neutral-300">No recipients yet</p>
+        <p className="text-sm text-neutral-500 mt-2 leading-relaxed max-w-sm mx-auto">
+          When people join this Claim Link, they&apos;ll appear here so you can set amounts before locking.
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <div className="overflow-x-auto">
+    <div className="space-y-4">
+      <div className="overflow-x-auto rounded-xl border border-neutral-800/70">
         <table className="min-w-full text-sm">
-          <thead className="text-neutral-500">
-            <tr>
-              <th className="text-left py-1.5 pr-3">Recipient</th>
-              <th className="text-left py-1.5 pr-3">Amount</th>
+          <thead>
+            <tr className="border-b border-neutral-800 bg-neutral-900/80">
+              <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                Recipient
+              </th>
+              <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                Amount
+              </th>
               {canEdit && (
-                <th className="text-left py-1.5 pr-3 w-20">Allocation</th>
+                <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500 w-28">
+                  Split
+                </th>
               )}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-neutral-800/80">
             {claims.map((c, i) => (
-              <tr key={c.id} className="border-t border-neutral-800">
-                <td className="py-1.5 pr-3 text-neutral-200 font-mono">
-                  {c.polypayd_username ?? c.user_id ?? "—"}
+              <tr key={c.id} className="bg-neutral-950/20">
+                <td className="py-3.5 px-4 align-top min-w-[140px]">
+                  <div className="text-neutral-100 text-sm font-medium">{c.display_primary}</div>
+                  {c.display_subtext ? (
+                    <div className="text-xs text-neutral-500 mt-1">{c.display_subtext}</div>
+                  ) : null}
                 </td>
-                <td className="py-1.5 pr-3">
+                <td className="py-3.5 px-4 align-top tabular-nums">
                   {canEdit ? (
                     <input
                       type="number"
@@ -199,21 +213,23 @@ export function ClaimablePayoutEditor({ claims, totalPool, currency = "GBP", can
                       onChange={(e) => handleAmountChange(i, e.target.value)}
                     />
                   ) : (
-                    <span className="text-neutral-200">{formatMoney(amounts[i], currency)}</span>
+                    <span className="font-medium text-neutral-100">{formatMoney(amounts[i], currency)}</span>
                   )}
                 </td>
                 {canEdit && (
-                  <td className="py-1.5 pr-3">
+                  <td className="py-3.5 px-4 align-top">
                     {manualFlags[i] ? (
                       <button
                         type="button"
                         onClick={() => handleSetToAuto(i)}
-                        className="text-xs text-neutral-500 hover:text-neutral-300 underline"
+                        className="text-xs font-medium text-neutral-500 hover:text-neutral-300 underline underline-offset-2"
                       >
-                        Reset to auto
+                        Use auto split
                       </button>
                     ) : (
-                      <span className="text-xs text-neutral-500">Auto</span>
+                      <span className="inline-flex rounded-full border border-neutral-700/80 px-2 py-0.5 text-xs text-neutral-400">
+                        Auto
+                      </span>
                     )}
                   </td>
                 )}
@@ -222,24 +238,32 @@ export function ClaimablePayoutEditor({ claims, totalPool, currency = "GBP", can
           </tbody>
         </table>
       </div>
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span className="text-neutral-500">
-          Total allocated:{" "}
-          <span className={isValidTotal && !manualExceedsPool && !negativeRemaining ? "text-neutral-200" : "text-red-400"}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <p className="text-sm text-neutral-500">
+          Pool total:{" "}
+          <span className="font-medium tabular-nums text-neutral-300">{formatMoney(totalPool, currency)}</span>
+          <span className="text-neutral-600 mx-2">·</span>
+          Allocated:{" "}
+          <span
+            className={
+              isValidTotal && !manualExceedsPool && !negativeRemaining ? "font-semibold tabular-nums text-neutral-100" : "font-semibold tabular-nums text-red-400"
+            }
+          >
             {formatMoney(totalAllocated, currency)}
           </span>
-          {(!isValidTotal || manualExceedsPool || negativeRemaining) &&
-            " (must equal " + formatMoney(totalPool, currency) + ")"}
-        </span>
+          {(!isValidTotal || manualExceedsPool || negativeRemaining) && (
+            <span className="text-red-400/90"> (must equal pool)</span>
+          )}
+        </p>
         {canEdit && (
-          <>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={handleSave}
               disabled={saving || !isValidTotal || manualExceedsPool || negativeRemaining}
-              className="rounded-lg border border-neutral-600 px-3 py-1.5 text-sm font-medium text-neutral-200 hover:bg-neutral-800 disabled:opacity-50 disabled:pointer-events-none"
+              className="rounded-xl border border-neutral-600 bg-neutral-900/40 px-4 py-2.5 text-sm font-semibold text-neutral-100 hover:bg-neutral-800/60 disabled:opacity-45 disabled:pointer-events-none transition-colors"
             >
-              {saving ? "Saving…" : "Save payouts"}
+              {saving ? "Saving…" : "Save amounts"}
             </button>
             <form action={lockFormAction} className="inline">
               <input type="hidden" name="orgId" value={orgId} readOnly />
@@ -248,17 +272,17 @@ export function ClaimablePayoutEditor({ claims, totalPool, currency = "GBP", can
               <button
                 type="submit"
                 disabled={finalizeDisabled}
-                className="rounded-lg border border-amber-700/60 bg-amber-950/30 px-3 py-1.5 text-sm font-medium text-amber-200 hover:bg-amber-900/40 disabled:opacity-50 disabled:pointer-events-none"
+                className="rounded-xl border border-amber-600/50 bg-amber-950/35 px-4 py-2.5 text-sm font-semibold text-amber-100 hover:bg-amber-900/45 disabled:opacity-45 disabled:pointer-events-none transition-colors"
               >
-                {lockPending ? "Locking…" : "Finalize allocations"}
+                {lockPending ? "Locking…" : "Lock allocations"}
               </button>
             </form>
-          </>
+          </div>
         )}
       </div>
       {canEdit && (
-        <p className="text-xs text-neutral-500">
-          Finalize allocations writes the amounts above to the database and locks them—you don&apos;t need to click Save first.
+        <p className="text-xs text-neutral-500 leading-relaxed">
+          Lock allocations saves these amounts and prevents further edits—you don&apos;t need Save first.
         </p>
       )}
       {lockState?.error && <p className="text-sm text-red-400">{lockState.error}</p>}
