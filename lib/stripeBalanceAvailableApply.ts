@@ -1,33 +1,13 @@
 import "server-only";
 import type Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sumGbpAvailableMinor } from "@/lib/stripeGbpBalanceSums";
 
-/**
- * Sum Stripe Balance `available[]` for GBP (minor units). Used only to update the platform
- * reconciliation checkpoint — not to size user wallet pending→available releases.
- */
-function sumGbpBalanceRows(
-  rows: Array<{ amount?: number; currency?: string }> | undefined,
-  currency: string
-): number {
-  if (!rows?.length) return 0;
-  let sum = 0;
-  const c = currency.toLowerCase();
-  for (const row of rows) {
-    if ((row.currency || "").toLowerCase() === c && typeof row.amount === "number") {
-      sum += row.amount;
-    }
-  }
-  return sum;
-}
-
-export function sumGbpAvailableMinor(balance: Stripe.Balance | null | undefined): number {
-  return sumGbpBalanceRows(balance?.available, "gbp");
-}
-
-export function sumGbpPendingMinor(balance: Stripe.Balance | null | undefined): number {
-  return sumGbpBalanceRows(balance?.pending, "gbp");
-}
+export {
+  sumGbpAvailableMinor,
+  sumGbpPendingMinor,
+  sumGbpInstantAvailableMinor,
+} from "@/lib/stripeGbpBalanceSums";
 
 export type BalanceAvailableApplyError = { status: number; message: string };
 

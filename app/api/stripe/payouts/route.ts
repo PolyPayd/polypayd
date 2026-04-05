@@ -7,7 +7,8 @@ import { getStripeServerClient } from "@/lib/stripe";
 import { ensureWalletForUser } from "@/lib/wallet";
 import { normalizeIdempotencyKey } from "@/lib/stripeConnectServer";
 import { resolveWithdrawalPricingFromWalletGbp } from "@/lib/payments/pricing";
-import { sumGbpAvailableMinor, sumGbpPendingMinor } from "@/lib/stripeBalanceAvailableApply";
+import { sumGbpPendingMinor } from "@/lib/stripeGbpBalanceSums";
+import { planConnectWalletPayout } from "@/lib/stripeConnectPayoutLiquidity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -150,17 +151,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    const connectedBalance = await stripe.balance.retrieve({ stripeAccount: stripeAccountId });
-    const connectedAvailableMinor = sumGbpAvailableMinor(connectedBalance);
-    if (connectedAvailableMinor < wd.netPayoutMinor) {
+    const connectedBalance = await stripe.balance.retrieve(
+      {},
+      { stripeAccount: stripeAccountId }
+    );
+
+    const liquidity = planConnectWalletPayout(connectedBalance, wd.netPayoutMinor, true);
+    if (!liquidity.ok) {
       const connectedPendingMinor = sumGbpPendingMinor(connectedBalance);
       return NextResponse.json(
         {
           error:
-            "Connected account Stripe available GBP is not enough for this payout. Wait for funds to settle or reduce the amount.",
+            "Connected account Stripe GBP balance is not enough for this payout. Wait for funds to settle or reduce the amount.",
           withdrawalFailureKind: "connected_stripe_available_insufficient" satisfies WithdrawalFailureKind,
           requiredGbpMinor: wd.netPayoutMinor,
-          connectedAvailableGbpMinor: connectedAvailableMinor,
+          connectedAvailableGbpMinor: liquidity.availableGbpMinor,
+          connectedInstantAvailableGbpMinor: liquidity.instantAvailableGbpMinor,
           connectedPendingGbpMinor: connectedPendingMinor,
         },
         { status: 400 }
@@ -173,7 +179,7 @@ export async function POST(req: Request) {
         {
           amount: wd.netPayoutMinor,
           currency: "gbp",
-          method: "instant",
+          method: liquidity.payoutMethod,
           metadata: {
             clerk_user_id: userId,
             idempotency_key: idempotencyKey,
@@ -259,6 +265,7 @@ export async function POST(req: Request) {
       feeDeductedFromWithdrawal: wd.feeDeductedFromWithdrawal,
       feeChargedSeparately: !wd.feeDeductedFromWithdrawal,
       feeMode: wd.feeMode,
+      stripePayoutMethod: liquidity.payoutMethod,
       stripeTransferId: null,
       stripePayoutId: payout.id,
       ledgerTransactionId: result.ledger_transaction_id,

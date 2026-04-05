@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { ensureWalletForUser } from "@/lib/wallet";
 import { getStripeServerClient } from "@/lib/stripe";
-import { sumGbpAvailableMinor, sumGbpPendingMinor } from "@/lib/stripeBalanceAvailableApply";
+import {
+  sumGbpAvailableMinor,
+  sumGbpInstantAvailableMinor,
+  sumGbpPendingMinor,
+} from "@/lib/stripeGbpBalanceSums";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,12 +67,15 @@ export async function GET(req: Request) {
     const platformPendingMinor = sumGbpPendingMinor(platformBalance);
 
     let connectedAvailableMinor: number | null = null;
+    let connectedInstantAvailableMinor: number | null = null;
     let connectedPendingMinor: number | null = null;
     if (stripeConnectedAccountId) {
-      const connectedBalance = await stripe.balance.retrieve({
-        stripeAccount: stripeConnectedAccountId,
-      });
+      const connectedBalance = await stripe.balance.retrieve(
+        {},
+        { stripeAccount: stripeConnectedAccountId }
+      );
       connectedAvailableMinor = sumGbpAvailableMinor(connectedBalance);
+      connectedInstantAvailableMinor = sumGbpInstantAvailableMinor(connectedBalance);
       connectedPendingMinor = sumGbpPendingMinor(connectedBalance);
     }
 
@@ -81,6 +88,7 @@ export async function GET(req: Request) {
             stripe_balance_context: "connected_account" as const,
             stripe_account_id: stripeConnectedAccountId,
             available_gbp_minor: connectedAvailableMinor,
+            instant_available_gbp_minor: connectedInstantAvailableMinor,
             pending_gbp_minor: connectedPendingMinor,
           }
         : {
