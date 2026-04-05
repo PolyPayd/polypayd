@@ -68,6 +68,10 @@ export function userMessageForFundBatchRpcResultError(rpcError: string | null | 
     "invalid claim_amount",
     "total allocations do not match",
     "marked funded but no fund ledger",
+    "fund ledger exists",
+    "missing sender debit",
+    "claim links are not issued",
+    "not in a claimable state",
   ];
 
   if (notNowSubstrings.some((s) => lower.includes(s))) return BATCH_FUND_NOT_NOW;

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
+import { batchStatusDisplayLabel } from "@/lib/batchStatusUi";
 import { archivePayout, deletePayout } from "./actions";
 
 type BatchRow = {
@@ -35,7 +36,10 @@ function statusBadge(status?: string | null) {
   if (s === "draft") return clsx(base, "border-neutral-700 text-neutral-200 bg-neutral-900/30");
   if (s === "ready") return clsx(base, "border-blue-700 text-blue-200 bg-blue-900/20");
   if (s === "processing") return clsx(base, "border-yellow-700 text-yellow-200 bg-yellow-900/20");
+  if (s === "funded") return clsx(base, "border-sky-700 text-sky-200 bg-sky-900/20");
+  if (s === "claiming") return clsx(base, "border-violet-700 text-violet-200 bg-violet-900/20");
   if (s === "completed") return clsx(base, "border-emerald-700 text-emerald-200 bg-emerald-900/20");
+  if (s === "completed_with_errors") return clsx(base, "border-amber-700 text-amber-200 bg-amber-900/20");
   if (s === "failed") return clsx(base, "border-red-700 text-red-200 bg-red-900/20");
 
   return clsx(base, "border-neutral-700 text-neutral-200 bg-neutral-900/30");
@@ -102,7 +106,12 @@ export function PayoutList({ orgId, batches, showingArchived }: Props) {
                     <Link href={`/app/batches/${batch.id}`} className="min-w-0 flex-1 focus:outline-none">
                       <div>
                         <span className="font-medium text-white">{batch.name ?? "Untitled payout"}</span>
-                        <span className={clsx("ml-2", statusBadge(batch.status))}>{batch.status}</span>
+                        <span
+                          className={clsx("ml-2", statusBadge(batch.status))}
+                          title={batch.status ?? undefined}
+                        >
+                          {batchStatusDisplayLabel(batch.status)}
+                        </span>
                       </div>
                       <div className="mt-2 flex items-center gap-4 text-sm text-neutral-400">
                         <span>{moneyGBP(batch.total_amount)}</span>

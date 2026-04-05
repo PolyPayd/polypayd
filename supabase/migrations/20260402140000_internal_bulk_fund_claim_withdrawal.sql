@@ -451,6 +451,40 @@ begin
   limit 1;
 
   if v_txn_id is not null then
+    v_batch_status := lower(trim(coalesce(v_batch.status, '')));
+    if v_batch_status not in ('funded', 'claiming') then
+      return jsonb_build_object(
+        'ok', false,
+        'error',
+        'Fund ledger exists but batch is not in a claimable state; contact support.'
+      );
+    end if;
+    if not exists (
+      select 1
+      from public.ledger_entries le
+      join public.wallets w on w.id = le.wallet_id
+      where le.transaction_id = v_txn_id
+        and le.entry_type = 'debit'
+        and w.user_id = v_funded_by
+    ) then
+      return jsonb_build_object(
+        'ok', false,
+        'error',
+        'Fund ledger is missing sender debit entries; contact support.'
+      );
+    end if;
+    if exists (
+      select 1
+      from public.batch_claims bc
+      where bc.batch_id = p_batch_id
+        and (bc.claim_token is null or trim(bc.claim_token) = '')
+    ) then
+      return jsonb_build_object(
+        'ok', false,
+        'error',
+        'Fund ledger exists but claim links are not issued; contact support.'
+      );
+    end if;
     return jsonb_build_object(
       'ok', true,
       'already_funded', true,

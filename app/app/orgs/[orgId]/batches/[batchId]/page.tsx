@@ -16,11 +16,8 @@ import { ReplaceCsvButton } from "./ReplaceCsvButton";
 import { RunBatchButton } from "./RunBatchButton";
 import { UploadCsvButton } from "./UploadCsvButton";
 import { ImpactQueryToast } from "@/components/impact/ImpactQueryToast";
-import {
-  batchFundIdempotencyKey,
-  isBatchPastWalletFundStage,
-  isBatchStatusFundableFromWallet,
-} from "@/lib/batchClaimableFunding";
+import { isBatchStatusFundableFromWallet } from "@/lib/batchClaimableFunding";
+import { batchStatusDisplayLabel } from "@/lib/batchStatusUi";
 import {
   formatAuditEventDataRaw,
   formatAuditEventSummary,
@@ -78,6 +75,7 @@ function statusBadge(status?: string | null) {
   if (s === "funded") return clsx(base, "border-sky-700 text-sky-200 bg-sky-900/20");
   if (s === "claiming") return clsx(base, "border-violet-700 text-violet-200 bg-violet-900/20");
   if (s === "completed") return clsx(base, "border-emerald-700 text-emerald-200 bg-emerald-900/20");
+  if (s === "completed_with_errors") return clsx(base, "border-amber-700 text-amber-200 bg-amber-900/20");
   if (s === "failed") return clsx(base, "border-red-700 text-red-200 bg-red-900/20");
 
   return clsx(base, "border-neutral-700 text-neutral-200 bg-neutral-900/30");
@@ -271,16 +269,6 @@ export default async function BatchDetailsPage({
     }
   }
 
-  let hasBatchFundLedger = false;
-  if (isClaimable) {
-    const { data: batchFundLedgerRow } = await supabase
-      .from("ledger_transactions")
-      .select("id")
-      .eq("idempotency_key", batchFundIdempotencyKey(batchId))
-      .maybeSingle();
-    hasBatchFundLedger = Boolean(batchFundLedgerRow?.id);
-  }
-
   // Current user's org role (viewer = read-only; owner/operator = can perform actions)
   const { userId } = await auth();
   let role: string | null = null;
@@ -334,17 +322,29 @@ export default async function BatchDetailsPage({
     claimableClaims.length >= 1 &&
     Math.abs(claimsAllocSum - claimPoolTotal) < 0.01;
 
-  const fundUiPastFunding =
-    hasBatchFundLedger ||
-    isBatchPastWalletFundStage(batchStatus) ||
-    batchStatus === "failed";
+  const claimLinksIssued =
+    claimableClaims.length > 0 &&
+    claimableClaims.every((c) => String(c.claim_token ?? "").trim() !== "");
+
+  const batchReserveComplete =
+    (batchStatus === "funded" || batchStatus === "claiming") && claimLinksIssued;
+
+  const batchReserveIncomplete =
+    (batchStatus === "funded" || batchStatus === "claiming") && !claimLinksIssued;
+
+  const claimFlowTerminal =
+    batchStatus === "failed" ||
+    batchStatus === "completed" ||
+    batchStatus === "completed_with_errors";
 
   const showFundBatchFromWalletButton =
     isClaimable &&
     claimableSchemaReady &&
     allocationsLocked &&
     canPerformActions &&
-    !fundUiPastFunding &&
+    !batchReserveComplete &&
+    !batchReserveIncomplete &&
+    !claimFlowTerminal &&
     isBatchStatusFundableFromWallet(batchStatus);
 
   const canFundBatchFromWallet =
@@ -363,14 +363,21 @@ export default async function BatchDetailsPage({
     }
   }
 
-  const claimableFundStatusMessage: string | null =
-    isClaimable && claimableSchemaReady && allocationsLocked && fundUiPastFunding
-      ? batchStatus === "completed" || batchStatus === "completed_with_errors"
-        ? "Wallet funding is complete for this batch. Payout results are shown below."
-        : batchStatus === "failed"
-          ? "This batch is in a failed state. Funding from your wallet is not available."
-          : "This batch is funded. Recipients can claim using their personal links."
-      : null;
+  let claimableFundStatusMessage: string | null = null;
+  if (isClaimable && claimableSchemaReady && allocationsLocked) {
+    if (batchReserveIncomplete) {
+      claimableFundStatusMessage =
+        "This batch did not fully finish reserving the pool and enabling claim links. Do not ask recipients to claim yet. Contact support with this batch ID.";
+    } else if (batchStatus === "completed" || batchStatus === "completed_with_errors") {
+      claimableFundStatusMessage =
+        "Wallet moves for this batch are complete. Results are shown below.";
+    } else if (batchStatus === "failed") {
+      claimableFundStatusMessage =
+        "This batch is in a failed state. You cannot fund it from your wallet.";
+    } else if (batchReserveComplete) {
+      claimableFundStatusMessage = "Recipients can now claim using their personal links.";
+    }
+  }
   // Fund-from-wallet replaces legacy one-shot Send for new claimable batches (per-recipient claim links after fund).
 
   // 2) Uploads (for tab + latest)
@@ -593,7 +600,9 @@ export default async function BatchDetailsPage({
           </Link>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold truncate">{batch.name ?? "Untitled batch"}</h1>
-            <span className={statusBadge(batch.status)}>{batch.status ?? "unknown"}</span>
+            <span className={statusBadge(batch.status)} title={batch.status ?? undefined}>
+              {batchStatusDisplayLabel(batch.status)}
+            </span>
           </div>
 
           <details className="mt-3 text-xs text-neutral-600">
@@ -682,7 +691,7 @@ export default async function BatchDetailsPage({
               <div className="text-2xl sm:text-3xl font-semibold tabular-nums text-white tracking-tight">
                 {moneyGBP(batch.total_amount)}
               </div>
-              <p className="text-xs text-neutral-500 mt-2 leading-relaxed">Total funded for this Claim Link batch.</p>
+              <p className="text-xs text-neutral-500 mt-2 leading-relaxed">Total amount in this Claim Link pool.</p>
             </div>
             <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/30 p-5 sm:p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
               <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">Joined</div>

@@ -34,7 +34,7 @@ export function formatAuditEventTitle(eventType: string): string {
     retry_failed_started: "Retry failed payouts started",
     retry_failed_completed: "Retry failed payouts completed",
     claimable_payouts_started: "Wallet payouts unlocked",
-    batch_funded: "Batch funded from wallet",
+    batch_funded: "Pool reserved — claim links enabled",
     claim_completed: "Wallet credit completed",
     wallet_topup_pending: "Top-up received (pending)",
     wallet_topup_available: "Top-up cleared to available",
@@ -108,7 +108,7 @@ export function formatAuditEventSummary(
       if (allocTotal != null && allocTotal > 0) bits.push(`${formatMoneyAmount(allocTotal, cur)} allocated`);
       if (platformFee != null && platformFee > 0) bits.push(`${formatMoneyAmount(platformFee, cur)} platform fee`);
       if (impactAmount != null && impactAmount > 0) bits.push(`${formatMoneyAmount(impactAmount, cur)} impact allocation`);
-      return bits.length ? bits.join(" · ") : "Pool funded and claim links enabled.";
+      return bits.length ? bits.join(" · ") : "Pool reserved and claim links enabled.";
     }
     case "claim_completed": {
       if (amount != null && amount > 0) {

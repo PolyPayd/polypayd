@@ -1,31 +1,5 @@
--- Align public.batches.status CHECK with Claim Link wallet funding.
---
--- Root issue: legacy deployments may allow only Bulk Send statuses (draft/ready/processing/completed/…)
--- but not `funded` or `claiming`. fund_batch_from_wallet then fails on:
---   update batches set status = 'funded' …
--- with check constraint batches_status_check.
---
--- Also tighten: only draft/ready/processing may enter the debit path (matches API + UI).
-
--- Default PostgreSQL name from older app schema; staging reported this exact name.
-alter table public.batches drop constraint if exists batches_status_check;
-
-alter table public.batches
-  add constraint batches_status_check check (
-    status in (
-      'draft',
-      'ready',
-      'processing',
-      'funded',
-      'claiming',
-      'completed',
-      'completed_with_errors',
-      'failed'
-    )
-  );
-
-comment on constraint batches_status_check on public.batches is
-  'Bulk Send + Claim Link lifecycle. funded/claiming are reserve-to-claim-link phases; completed* / failed end states.';
+-- Strict fund_batch_from_wallet idempotency: do not return already_funded unless batch row,
+-- sender debit ledger entry, and claim_token issuance are all consistent.
 
 create or replace function public.fund_batch_from_wallet(
   p_batch_id uuid,
@@ -123,6 +97,7 @@ begin
         'Fund ledger exists but batch is not in a claimable state; contact support.'
       );
     end if;
+
     if not exists (
       select 1
       from public.ledger_entries le
@@ -137,6 +112,7 @@ begin
         'Fund ledger is missing sender debit entries; contact support.'
       );
     end if;
+
     if exists (
       select 1
       from public.batch_claims bc
@@ -149,6 +125,7 @@ begin
         'Fund ledger exists but claim links are not issued; contact support.'
       );
     end if;
+
     return jsonb_build_object(
       'ok', true,
       'already_funded', true,
@@ -344,6 +321,6 @@ end;
 $$;
 
 comment on function public.fund_batch_from_wallet(uuid, text) is
-  'Debits funder wallet, moves principal to __system__ reserved liability, platform fee to __platform__. Idempotent via ledger idempotency_key batch-fund-<batch_id>. Allowed batch statuses before fund: draft, ready, processing.';
+  'Debits funder wallet, reserves principal on __system__, fee to __platform__. Idempotent only when batch is funded/claiming, sender debit exists, and claim_token is set on all batch_claims.';
 
 grant execute on function public.fund_batch_from_wallet(uuid, text) to service_role;

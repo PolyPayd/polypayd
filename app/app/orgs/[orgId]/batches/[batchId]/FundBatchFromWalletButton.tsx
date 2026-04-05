@@ -63,24 +63,24 @@ export function FundBatchFromWalletButton({
       }
 
       if (data.alreadyFunded) {
-        toast.info("Batch already funded", { id: `fund-batch-${batchId}` });
+        toast.info("Pool is already live for claims", { id: `fund-batch-${batchId}` });
       } else {
         const ic = data.impactAmountGbp ?? 0;
         const pf = data.platformFeeGbp;
         if (ic > 0) {
           const feeLine = pf != null && pf > 0 ? `Platform fee ${formatImpactMoney(pf)}. ` : "";
-          toast.success("Batch funded", {
+          toast.success("Recipients can now claim", {
             id: `impact-fund-${batchId}`,
             description: `${feeLine}${formatImpactMoney(ic)} contributed to impact.`,
             duration: 7000,
           });
         } else {
-          toast.success("Batch funded", {
+          toast.success("Recipients can now claim", {
             id: `fund-batch-${batchId}`,
             description:
               pf != null && pf > 0
-                ? `Platform fee ${formatImpactMoney(pf)}. Recipients can claim into their wallets.`
-                : "Recipients can claim into their PolyPayd wallets.",
+                ? `Platform fee ${formatImpactMoney(pf)}. Money was debited from your wallet and claim links are live.`
+                : "Money was debited from your wallet and claim links are live.",
             duration: 6000,
           });
         }

@@ -697,11 +697,6 @@ export async function sendClaimablePayouts(
       ? Number(impactRaw)
       : impactAmountFromPlatformFee(result?.platform_fee);
   if (result && result.ok === false) {
-    if (result.error?.toLowerCase().includes("duplicate") && result.error?.toLowerCase().includes("idempotency")) {
-      await supabase.from("batches").update({ status: "completed" }).eq("id", bid).eq("org_id", oid);
-      revalidatePath(`/app/batches/${bid}`);
-      return { success: true };
-    }
     return { error: result.error ?? "Payout failed" };
   }
   revalidatePath(`/app/batches/${bid}`);
