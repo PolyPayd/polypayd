@@ -322,15 +322,31 @@ export default async function BatchDetailsPage({
     claimableClaims.length >= 1 &&
     Math.abs(claimsAllocSum - claimPoolTotal) < 0.01;
 
-  const claimLinksIssued =
+  const hasClaimableMissingToken = claimableClaims.some(
+    (c) =>
+      c.recipient_lifecycle_status === "claimable" &&
+      String(c.claim_token ?? "").trim() === ""
+  );
+
+  /** After fund: every claimable row has a token; joined/credited rows legitimately have no token. */
+  const claimLinksReserveConsistent =
     claimableClaims.length > 0 &&
-    claimableClaims.every((c) => String(c.claim_token ?? "").trim() !== "");
+    !hasClaimableMissingToken &&
+    claimableClaims.every((c) => {
+      if (c.recipient_lifecycle_status === "claimable") {
+        return String(c.claim_token ?? "").trim() !== "";
+      }
+      return true;
+    });
 
   const batchReserveComplete =
-    (batchStatus === "funded" || batchStatus === "claiming") && claimLinksIssued;
+    (batchStatus === "funded" ||
+      batchStatus === "claiming" ||
+      batchStatus === "completed") &&
+    claimLinksReserveConsistent;
 
   const batchReserveIncomplete =
-    (batchStatus === "funded" || batchStatus === "claiming") && !claimLinksIssued;
+    (batchStatus === "funded" || batchStatus === "claiming") && !claimLinksReserveConsistent;
 
   const claimFlowTerminal =
     batchStatus === "failed" ||
@@ -375,7 +391,14 @@ export default async function BatchDetailsPage({
       claimableFundStatusMessage =
         "This batch is in a failed state. You cannot fund it from your wallet.";
     } else if (batchReserveComplete) {
-      claimableFundStatusMessage = "Recipients can now claim using their personal links.";
+      const hasOutstandingPrivateLinks = claimableClaims.some(
+        (c) =>
+          c.recipient_lifecycle_status === "claimable" &&
+          String(c.claim_token ?? "").trim() !== ""
+      );
+      claimableFundStatusMessage = hasOutstandingPrivateLinks
+        ? "Recipients can now claim using their personal links."
+        : "Joined recipients were credited to their PolyPayd wallets. There are no open private claim links.";
     }
   }
   // Fund-from-wallet replaces legacy one-shot Send for new claimable batches (per-recipient claim links after fund).
@@ -1019,12 +1042,19 @@ export default async function BatchDetailsPage({
               saveAction={updateClaimAmounts}
             />
           </div>
-          {(batchStatus === "funded" || batchStatus === "claiming") && canPerformActions && (
+          {(batchStatus === "funded" || batchStatus === "claiming") &&
+            canPerformActions &&
+            claimableClaims.some(
+              (c) =>
+                c.recipient_lifecycle_status === "claimable" &&
+                String(c.claim_token ?? "").trim() !== ""
+            ) && (
             <div className="mt-8 pt-6 border-t border-neutral-800/80">
               <h3 className="text-sm font-semibold text-white mb-1">Private claim links</h3>
               <p className="text-xs text-neutral-500 mb-4 max-w-2xl leading-relaxed">
                 Send each link only to the matching person. They must use the same sign-in they used to join. Funds go to
-                their PolyPayd wallet (bank withdrawal is separate).
+                their PolyPayd wallet (bank withdrawal is separate). Recipients who already joined before you sent the
+                payout were credited automatically and do not need a link.
               </p>
               <div className="overflow-x-auto rounded-xl border border-neutral-800/70 text-sm">
                 <table className="min-w-full">
@@ -1043,7 +1073,13 @@ export default async function BatchDetailsPage({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-800/80">
-                    {claimableClaims.map((c) => (
+                    {claimableClaims
+                      .filter(
+                        (c) =>
+                          c.recipient_lifecycle_status === "claimable" &&
+                          String(c.claim_token ?? "").trim() !== ""
+                      )
+                      .map((c) => (
                       <tr key={c.id} className="bg-neutral-950/20">
                         <td className="py-3.5 px-4 align-top min-w-[140px]">
                           <div className="text-neutral-100 text-sm font-medium">{c.display_primary}</div>
@@ -1060,16 +1096,12 @@ export default async function BatchDetailsPage({
                           </span>
                         </td>
                         <td className="py-3.5 px-4 align-top whitespace-nowrap">
-                          {c.claim_token ? (
-                            <Link
-                              href={`/app/claim-payout/${c.claim_token}`}
-                              className="text-sm font-medium text-sky-400 hover:text-sky-300 transition-colors"
-                            >
-                              Open claim page
-                            </Link>
-                          ) : (
-                            <span className="text-xs text-neutral-600">Preparing…</span>
-                          )}
+                          <Link
+                            href={`/app/claim-payout/${c.claim_token}`}
+                            className="text-sm font-medium text-sky-400 hover:text-sky-300 transition-colors"
+                          >
+                            Open claim page
+                          </Link>
                         </td>
                       </tr>
                     ))}
