@@ -10,12 +10,10 @@ import { WalletTopUpReturnHandler } from "./WalletTopUpReturnHandler";
 import { ImpactWalletCard } from "@/components/impact/ImpactWalletCard";
 import { fetchUserImpactContributionTotal } from "@/lib/impact";
 import type { WalletDashboardLedgerTotals } from "@/lib/walletDashboardAggregates";
-import {
-  fetchWalletRecentTransactionRows,
-  type WalletRecentStatusVariant,
-} from "@/lib/walletRecentTransactions";
+import { fetchWalletRecentTransactionRows } from "@/lib/walletRecentTransactions";
 import { getStripeServerClient } from "@/lib/stripe";
-import { FintechBadge, FintechCard, PageShell } from "@/components/fintech";
+import { FintechCard, PageShell } from "@/components/fintech";
+import { WalletActivityList } from "@/components/wallet/WalletActivityList";
 
 export const dynamic = "force-dynamic";
 
@@ -25,13 +23,7 @@ function money(amount: number, currency = "GBP") {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(amount);
 }
 
-function statusTone(v: WalletRecentStatusVariant): "success" | "warning" | "error" | "neutral" | "info" {
-  if (v === "pending") return "warning";
-  if (v === "available") return "success";
-  if (v === "partial") return "info";
-  if (v === "failed") return "error";
-  return "neutral";
-}
+const TRANSACTION_PREVIEW = 5;
 
 export default async function WalletPage({
   params,
@@ -105,6 +97,8 @@ export default async function WalletPage({
   };
 
   const recentRows = await fetchWalletRecentTransactionRows(supabase, wallet.id);
+  const previewRows = recentRows.slice(0, TRANSACTION_PREVIEW);
+  const hasMoreTransactions = recentRows.length > TRANSACTION_PREVIEW;
 
   const available = wallet.current_balance;
   const pending = wallet.pending_balance;
@@ -220,50 +214,23 @@ export default async function WalletPage({
         </div>
       </FintechCard>
 
-      {/* Activity */}
+      {/* Activity (preview) */}
       <FintechCard interactive={false}>
-        <h2 className="text-lg font-semibold tracking-tight text-[#F9FAFB]">Transactions</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-[#F9FAFB]">Activity</h2>
         <p className="mt-1 text-sm text-[#6B7280]">Recent credits and debits</p>
 
-        {recentRows.length === 0 ? (
-          <div className="mt-8 py-10 text-center">
-            <p className="text-sm font-medium text-[#9CA3AF]">No activity yet</p>
-            <p className="mx-auto mt-2 max-w-sm text-sm text-[#6B7280]">
-              Add funds or receive a payout to see transactions here.
-            </p>
+        <WalletActivityList rows={previewRows} currency={currency} className="mt-6" />
+
+        {hasMoreTransactions ? (
+          <div className="mt-1 border-t border-white/[0.04] pt-4">
+            <Link
+              href={`/app/orgs/${orgId}/wallet/transactions`}
+              className="text-sm font-medium text-[#3B82F6] transition-colors hover:text-[#60A5FA]"
+            >
+              See all
+            </Link>
           </div>
-        ) : (
-          <ul className="mt-8 space-y-0">
-            {recentRows.map((r, i) => (
-              <li
-                key={r.id}
-                className={`flex flex-wrap items-start justify-between gap-3 py-4 transition-colors hover:bg-white/[0.02] sm:flex-nowrap sm:rounded-lg sm:px-2 sm:-mx-2 ${
-                  i > 0 ? "border-t border-white/[0.04]" : ""
-                }`}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-[#F9FAFB]">{r.typeLabel}</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2">
-                    {r.statusLabel && r.statusVariant ? (
-                      <FintechBadge tone={statusTone(r.statusVariant)}>{r.statusLabel}</FintechBadge>
-                    ) : null}
-                    <span className="text-xs text-[#6B7280]">
-                      {r.date ? new Date(r.date).toLocaleString("en-GB") : "—"}
-                    </span>
-                  </div>
-                </div>
-                <p
-                  className={`shrink-0 text-base font-semibold tabular-nums ${
-                    r.entry_type === "credit" ? "text-[#22C55E]" : "text-[#F59E0B]"
-                  }`}
-                >
-                  {r.entry_type === "credit" ? "+" : "−"}
-                  {money(r.amount, currency)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
+        ) : null}
       </FintechCard>
     </PageShell>
   );
