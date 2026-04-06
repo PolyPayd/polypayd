@@ -13,6 +13,7 @@ import type { WalletDashboardLedgerTotals } from "@/lib/walletDashboardAggregate
 import { fetchWalletRecentTransactionRows } from "@/lib/walletRecentTransactions";
 import { getStripeServerClient } from "@/lib/stripe";
 import { FintechCard, PageShell } from "@/components/fintech";
+import { WalletAccountCard } from "@/components/wallet/WalletAccountCard";
 import { WalletActivityExpandable } from "@/components/wallet/WalletActivityExpandable";
 
 export const dynamic = "force-dynamic";
@@ -146,43 +147,30 @@ export default async function WalletPage({
         Back to payouts
       </Link>
 
-      {/* Primary balance — account identity + available funds */}
-      <FintechCard elevated interactive={false} className="mb-6 p-6 sm:p-8">
-        <p className="text-[15px] font-medium text-[#9CA3AF]">PolyPayd</p>
-        <p className="mt-2 text-xs font-medium text-[#6B7280]">Available balance</p>
-        <p className="mt-2 text-[2.125rem] font-bold tabular-nums leading-none tracking-tight text-[#F9FAFB] sm:text-[2.75rem]">
-          {money(available, currency)}
-        </p>
-        {pending > 0.005 ? (
-          <p className="mt-4 text-xs leading-relaxed text-[#6B7280]">
-            Pending <span className="tabular-nums text-[#9CA3AF]">{money(pending, currency)}</span>
-            <span className="text-[#5C6570]"> · not withdrawable yet</span>
-          </p>
-        ) : null}
-        {totals.totalFromInternalClaims > 0.005 ? (
-          <p className="mt-3 text-[11px] leading-relaxed text-[#5C6570]">
-            Includes {money(totals.totalFromInternalClaims, currency)} from batch claims.
-          </p>
-        ) : null}
-
-        <div className="mt-8 flex w-full flex-col gap-3 sm:max-w-xl sm:flex-row sm:items-stretch">
-          <div className="w-full sm:flex-1">
-            <AddFundsButton orgId={orgId} addFundsBlockedReason={addFundsBlockedReason} className="h-12 w-full" />
-          </div>
-          <div className="w-full sm:flex-1">
-            <WithdrawHeaderButton className="h-12 w-full" />
-          </div>
-        </div>
-      </FintechCard>
-
-      {/* Withdraw panel (bank + amount) */}
-      <div className="mb-8">
-        <WithdrawTestPanel
-          availableToWithdrawGbp={available}
-          pendingFundsGbp={pending}
-          hasConnectedBank={Boolean(connectAccount?.stripe_account_id)}
-        />
-      </div>
+      <WalletAccountCard
+        currency={currency}
+        available={available}
+        pending={pending}
+        claimsFromBatch={totals.totalFromInternalClaims > 0.005 ? totals.totalFromInternalClaims : undefined}
+        actions={
+          <>
+            <AddFundsButton
+              orgId={orgId}
+              addFundsBlockedReason={addFundsBlockedReason}
+              className="h-12 w-full min-h-12 sm:min-w-0 sm:flex-1"
+            />
+            <WithdrawHeaderButton className="h-12 w-full min-h-12 sm:min-w-0 sm:flex-1" />
+          </>
+        }
+        footer={
+          <WithdrawTestPanel
+            embedded
+            availableToWithdrawGbp={available}
+            pendingFundsGbp={pending}
+            hasConnectedBank={Boolean(connectAccount?.stripe_account_id)}
+          />
+        }
+      />
 
       {/* Summary: one surface */}
       <FintechCard interactive={false} className="mb-8 p-5 sm:p-6">
