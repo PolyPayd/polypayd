@@ -15,10 +15,9 @@ import {
   type WalletRecentStatusVariant,
 } from "@/lib/walletRecentTransactions";
 import { getStripeServerClient } from "@/lib/stripe";
+import { FintechBadge, FintechCard, PageShell } from "@/components/fintech";
 
 export const dynamic = "force-dynamic";
-
-/** Ledger totals use `wallet_dashboard_ledger_aggregates` (full history). See `lib/walletDashboardAggregates.ts`. */
 
 type Params = { orgId: string };
 
@@ -26,23 +25,12 @@ function money(amount: number, currency = "GBP") {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(amount);
 }
 
-function statusBadgeClass(v: WalletRecentStatusVariant): string {
-  if (v === "pending") {
-    return "border-amber-500/35 bg-amber-950/40 text-amber-100";
-  }
-  if (v === "available") {
-    return "border-emerald-500/35 bg-emerald-950/40 text-emerald-100";
-  }
-  if (v === "partial") {
-    return "border-sky-500/30 bg-sky-950/30 text-sky-100/95";
-  }
-  if (v === "allocated") {
-    return "border-neutral-600 bg-neutral-900/70 text-neutral-200";
-  }
-  if (v === "failed") {
-    return "border-red-500/35 bg-red-950/45 text-red-100";
-  }
-  return "";
+function statusTone(v: WalletRecentStatusVariant): "success" | "warning" | "error" | "neutral" | "info" {
+  if (v === "pending") return "warning";
+  if (v === "available") return "success";
+  if (v === "partial") return "info";
+  if (v === "failed") return "error";
+  return "neutral";
 }
 
 export default async function WalletPage({
@@ -53,13 +41,19 @@ export default async function WalletPage({
   const { orgId } = await Promise.resolve(params as Promise<Params>);
 
   if (!orgId) {
-    return <div className="p-6 text-red-500">Missing orgId in route.</div>;
+    return (
+      <PageShell>
+        <p className="text-sm text-[#EF4444]">Missing orgId in route.</p>
+      </PageShell>
+    );
   }
 
   const { userId } = await auth();
   if (!userId) {
     return (
-      <div className="p-6 text-red-500">You must be signed in to view your wallet.</div>
+      <PageShell>
+        <p className="text-sm text-[#EF4444]">You must be signed in to view your wallet.</p>
+      </PageShell>
     );
   }
 
@@ -74,7 +68,9 @@ export default async function WalletPage({
 
   if (!membership) {
     return (
-      <div className="p-6 text-red-500">You do not have access to this organisation.</div>
+      <PageShell>
+        <p className="text-sm text-[#EF4444]">You do not have access to this organisation.</p>
+      </PageShell>
     );
   }
 
@@ -82,9 +78,11 @@ export default async function WalletPage({
   const wallet = await ensureWalletForUser(supabase, userId, currency);
   if (!wallet) {
     return (
-      <div className="p-6 text-amber-500">
-        We could not load or create your wallet. Please refresh the page or try again later.
-      </div>
+      <PageShell>
+        <p className="text-sm text-[#F59E0B]">
+          We could not load or create your wallet. Please refresh the page or try again later.
+        </p>
+      </PageShell>
     );
   }
 
@@ -143,161 +141,117 @@ export default async function WalletPage({
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:py-10">
-        <Link
-          href={`/app/batches`}
-          className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-white mb-8 transition-colors"
-        >
-          <span aria-hidden>←</span> Back to payouts
-        </Link>
+    <PageShell>
+      <Suspense fallback={null}>
+        <WalletTopUpReturnHandler />
+      </Suspense>
 
-        <Suspense fallback={null}>
-          <WalletTopUpReturnHandler />
-        </Suspense>
+      <Link
+        href="/app/batches"
+        className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-[#9CA3AF] transition-colors hover:text-[#F9FAFB]"
+      >
+        <span aria-hidden className="text-[#6B7280]">
+          ←
+        </span>
+        Back to payouts
+      </Link>
 
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end sm:justify-between gap-4 mb-10">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.12em] text-neutral-500 mb-1.5">Wallet</p>
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Your balance</h1>
-            <p className="mt-2 text-sm text-neutral-500 max-w-md leading-relaxed">
-              Available funds can be withdrawn to your bank. Pending funds are still clearing and aren&apos;t withdrawable yet.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <WithdrawHeaderButton />
-            <AddFundsButton orgId={orgId} addFundsBlockedReason={addFundsBlockedReason} />
-          </div>
+      {/* Primary balance */}
+      <FintechCard elevated className="mb-5">
+        <p className="text-xs font-medium uppercase tracking-wide text-[#6B7280]">Available balance</p>
+        <p className="mt-2 text-4xl font-bold tabular-nums tracking-tight text-[#F9FAFB] sm:text-[2.5rem]">
+          {money(available, currency)}
+        </p>
+        {pending > 0.005 && (
+          <p className="mt-3 text-sm text-[#9CA3AF]">
+            <span className="text-[#6B7280]">Pending</span>{" "}
+            <span className="font-medium tabular-nums text-[#F9FAFB]">{money(pending, currency)}</span>
+            <span className="text-[#6B7280]"> · not withdrawable yet</span>
+          </p>
+        )}
+        {totals.totalFromInternalClaims > 0.005 && (
+          <p className="mt-3 text-xs leading-relaxed text-[#6B7280]">
+            Includes {money(totals.totalFromInternalClaims, currency)} from batch claims.
+          </p>
+        )}
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <AddFundsButton orgId={orgId} addFundsBlockedReason={addFundsBlockedReason} />
+          <WithdrawHeaderButton />
         </div>
+      </FintechCard>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-8">
-          <div className="lg:col-span-7 rounded-2xl border border-emerald-900/35 bg-gradient-to-b from-emerald-950/25 to-neutral-900/40 p-6 sm:p-8 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]">
-            <div className="flex flex-col md:flex-row md:items-stretch md:gap-8 md:divide-y-0 md:divide-x divide-neutral-800/80 divide-y md:divide-y-0">
-              <div className="flex-1 pb-6 md:pb-0 md:pr-8">
-                <p className="text-xs font-semibold uppercase tracking-[0.1em] text-emerald-200/70 mb-2">
-                  Available to withdraw
-                </p>
-                <p className="text-3xl sm:text-4xl font-semibold tabular-nums tracking-tight text-white">
-                  {money(available, currency)}
-                </p>
-                <p className="mt-3 text-sm text-neutral-400 leading-relaxed max-w-sm">
-                  Money you can send to your bank now. Claim Link payouts credit here as soon as they&apos;re funded—no card
-                  settlement wait.
-                </p>
-                {totals.totalFromInternalClaims > 0.005 && (
-                  <p className="mt-4 text-xs text-emerald-200/55 leading-relaxed border-t border-white/5 pt-4">
-                    Includes {money(totals.totalFromInternalClaims, currency)} from batch claims (already available).
-                  </p>
-                )}
-                <p className="mt-4 text-xs text-neutral-600">{currency} wallet</p>
-              </div>
-              <div className="flex-1 pt-6 md:pt-0 md:pl-8">
-                <p className="text-xs font-semibold uppercase tracking-[0.1em] text-amber-200/60 mb-2">Pending</p>
-                <p className="text-2xl font-semibold tabular-nums text-neutral-100">{money(pending, currency)}</p>
-                <p className="mt-3 text-sm text-neutral-500 leading-relaxed">
-                  Usually card top-ups or transfers still processing. Pending balance cannot be withdrawn until it moves to
-                  available.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="lg:col-span-5 flex flex-col gap-4">
-            <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/35 p-5 sm:p-6 flex-1 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-2">Total added (cards)</p>
-              <p className="text-xl font-semibold tabular-nums text-emerald-300/95">{money(totals.totalFunded, currency)}</p>
-              <p className="mt-2 text-xs text-neutral-500 leading-relaxed">Card and wallet top-ups credited over time.</p>
-              {totals.totalFromInternalClaims > 0.005 && (
-                <div className="mt-4 pt-4 border-t border-neutral-800/80">
-                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-1">
-                    From batch claims
-                  </p>
-                  <p className="text-lg font-semibold tabular-nums text-sky-300/90">
-                    {money(totals.totalFromInternalClaims, currency)}
-                  </p>
-                </div>
-              )}
-            </div>
-            <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/35 p-5 sm:p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500 mb-2">Total withdrawn</p>
-              <p className="text-xl font-semibold tabular-nums text-amber-200/90">{money(totals.totalSent, currency)}</p>
-              <p className="mt-2 text-xs text-neutral-500 leading-relaxed">Sent from this wallet to your bank.</p>
-            </div>
-          </div>
-        </div>
-
+      {/* Withdraw panel (bank + amount) */}
+      <div className="mb-8">
         <WithdrawTestPanel
           availableToWithdrawGbp={available}
           pendingFundsGbp={pending}
           hasConnectedBank={Boolean(connectAccount?.stripe_account_id)}
         />
+      </div>
 
-        <div className="mb-10">
+      {/* Secondary stats */}
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <FintechCard>
+          <p className="text-xs font-medium text-[#6B7280]">Added (cards)</p>
+          <p className="mt-2 text-lg font-semibold tabular-nums text-[#F9FAFB]">
+            {money(totals.totalFunded, currency)}
+          </p>
+        </FintechCard>
+        <FintechCard>
+          <p className="text-xs font-medium text-[#6B7280]">Withdrawn</p>
+          <p className="mt-2 text-lg font-semibold tabular-nums text-[#F9FAFB]">
+            {money(totals.totalSent, currency)}
+          </p>
+        </FintechCard>
+        <div className="sm:col-span-1">
           <ImpactWalletCard userImpactTotal={userImpactTotal} currency={currency} schemaReady={impactSchemaReady} />
         </div>
-
-        <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/30 p-6 sm:p-8 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
-          <h2 className="text-base font-semibold text-white mb-1">Activity</h2>
-          <p className="text-sm text-neutral-500 mb-6">Recent credits and debits on your wallet.</p>
-          {recentRows.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-neutral-800 bg-neutral-950/40 px-6 py-10 text-center">
-              <p className="text-sm font-medium text-neutral-300">No transactions yet</p>
-              <p className="text-sm text-neutral-500 mt-2 max-w-sm mx-auto leading-relaxed">
-                Add funds from your wallet page, or receive a Claim Link payout from an organiser.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-neutral-800/60">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b border-neutral-800 bg-neutral-900/80">
-                    <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                      Date
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                      Type
-                    </th>
-                    <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                      Status
-                    </th>
-                    <th className="text-right py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
-                      Amount
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-800/80">
-                  {recentRows.map((r) => (
-                    <tr key={r.id} className="bg-neutral-950/20">
-                      <td className="py-3.5 px-4 text-neutral-300 whitespace-nowrap">
-                        {r.date ? new Date(r.date).toLocaleString("en-GB") : "—"}
-                      </td>
-                      <td className="py-3.5 px-4 text-neutral-200">{r.typeLabel}</td>
-                      <td className="py-3.5 px-4">
-                        {r.statusLabel && r.statusVariant ? (
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusBadgeClass(r.statusVariant)}`}
-                          >
-                            {r.statusLabel}
-                          </span>
-                        ) : (
-                          <span className="text-neutral-600">—</span>
-                        )}
-                      </td>
-                      <td
-                        className={`py-3.5 px-4 text-right font-semibold tabular-nums ${
-                          r.entry_type === "credit" ? "text-emerald-300" : "text-amber-200/95"
-                        }`}
-                      >
-                        {r.entry_type === "credit" ? "+" : "−"}
-                        {money(r.amount, currency)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
       </div>
-    </div>
+
+      {/* Activity */}
+      <FintechCard>
+        <h2 className="text-lg font-semibold text-[#F9FAFB]">Transactions</h2>
+        <p className="mt-1 text-sm text-[#6B7280]">Recent credits and debits</p>
+
+        {recentRows.length === 0 ? (
+          <div className="mt-6 rounded-xl border border-dashed border-white/[0.06] bg-[#0B0F14]/50 py-12 text-center">
+            <p className="text-sm font-medium text-[#9CA3AF]">No activity yet</p>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-[#6B7280]">
+              Add funds or receive a payout to see transactions here.
+            </p>
+          </div>
+        ) : (
+          <ul className="mt-6 divide-y divide-white/[0.05]">
+            {recentRows.map((r) => (
+              <li
+                key={r.id}
+                className="flex flex-wrap items-start justify-between gap-3 py-4 first:pt-0 transition-colors hover:bg-white/[0.02] sm:flex-nowrap sm:px-1 sm:-mx-1 sm:rounded-lg"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-[#F9FAFB]">{r.typeLabel}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    {r.statusLabel && r.statusVariant ? (
+                      <FintechBadge tone={statusTone(r.statusVariant)}>{r.statusLabel}</FintechBadge>
+                    ) : null}
+                    <span className="text-xs text-[#6B7280]">
+                      {r.date ? new Date(r.date).toLocaleString("en-GB") : "—"}
+                    </span>
+                  </div>
+                </div>
+                <p
+                  className={`shrink-0 text-base font-semibold tabular-nums ${
+                    r.entry_type === "credit" ? "text-[#22C55E]" : "text-[#F59E0B]"
+                  }`}
+                >
+                  {r.entry_type === "credit" ? "+" : "−"}
+                  {money(r.amount, currency)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </FintechCard>
+    </PageShell>
   );
 }

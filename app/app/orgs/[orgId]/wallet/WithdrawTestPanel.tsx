@@ -8,6 +8,7 @@ import {
   formatMinorAsGbp,
   resolveWithdrawalPricingFromWalletGbp,
 } from "@/lib/payments/pricing";
+import { FintechButton, FintechCard, FintechInput } from "@/components/fintech";
 
 const OPEN_WITHDRAW_EVENT = "polypayd:open-withdraw-panel";
 
@@ -332,268 +333,178 @@ export function WithdrawTestPanel({
       : null;
 
   return (
-    <div ref={rootRef} className="mb-8">
+    <div ref={rootRef}>
       {!open ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="group box-border flex w-full min-h-[5.5rem] items-center justify-between gap-6 rounded-2xl border border-neutral-800/90 bg-neutral-900/35 px-6 py-6 text-left shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset] transition-colors hover:border-neutral-700 hover:bg-neutral-900/50 sm:min-h-[6rem] sm:gap-8 sm:px-9 sm:py-7"
+          className="flex w-full items-center justify-between gap-4 rounded-2xl border border-white/[0.05] bg-[#121821] px-5 py-5 text-left transition-all duration-200 hover:border-white/[0.08] hover:bg-[#161F2B] sm:px-6 sm:py-6"
           aria-expanded="false"
           aria-controls="withdraw-funds-panel"
         >
-          <div className="min-w-0 flex-1 space-y-2.5 pr-3 sm:pr-4">
-            <p className="text-base font-semibold leading-snug tracking-tight text-white">Withdraw to bank</p>
-            <p className="max-w-lg text-sm leading-relaxed text-neutral-500">
-              {isZeroAvailable
-                ? "When you have available balance, move it to your bank in a few steps."
-                : "Move cleared funds to your connected bank account."}
+          <div className="min-w-0">
+            <p className="text-base font-semibold text-[#F9FAFB]">Withdraw to bank</p>
+            <p className="mt-1 text-sm text-[#6B7280]">
+              {isZeroAvailable ? "Available when funds clear." : "Send to your linked account."}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-4 sm:gap-5 sm:border-l sm:border-neutral-800/70 sm:pl-8">
-            <div className="text-right sm:min-w-[8rem]">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500 sm:text-[11px]">
-                Available
-              </p>
-              <p className="mt-1.5 text-lg font-semibold tabular-nums leading-none tracking-tight text-white sm:text-xl">
-                {formatMoneyGbp(availableToWithdrawGbp)}
-              </p>
-              {isZeroAvailable && (
-                <p className="mt-2 text-[11px] leading-snug text-neutral-600 sm:text-xs">Nothing to withdraw yet</p>
-              )}
-            </div>
-            <span className="flex shrink-0 items-center justify-center pl-0.5 text-neutral-400">
-              <AccordionChevron expanded={false} />
-            </span>
+          <div className="flex shrink-0 items-center gap-3">
+            <p className="text-right text-sm tabular-nums text-[#9CA3AF]">
+              <span className="block text-xs font-medium text-[#6B7280]">Up to</span>
+              {formatMoneyGbp(availableToWithdrawGbp)}
+            </p>
+            <AccordionChevron expanded={false} />
           </div>
         </button>
       ) : (
-    <section
-      id="withdraw-funds-panel"
-      className="rounded-2xl border border-neutral-800/90 bg-neutral-900/35 p-6 sm:p-7 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset]"
-      aria-labelledby="withdraw-funds-heading"
-    >
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800/80 pb-5">
-        <div className="min-w-0 flex-1">
-          <h2 id="withdraw-funds-heading" className="text-lg font-semibold tracking-tight text-white">
-            Withdraw to bank
-          </h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-neutral-500">
-            {isZeroAvailable
-              ? "You’ll be able to withdraw as soon as funds move from pending to available."
-              : "Transfers use your connected bank on file with Stripe."}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <div className="hidden text-right sm:block">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-500">Available</p>
-            <p className="mt-0.5 text-base font-semibold tabular-nums text-white">
-              {formatMoneyGbp(availableToWithdrawGbp)}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2 rounded-lg border border-neutral-600 px-3 py-2 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-500 hover:bg-neutral-800/40 hover:text-white"
-            aria-expanded="true"
-            aria-controls="withdraw-funds-panel"
-          >
-            <span className="hidden sm:inline">Collapse</span>
-            <AccordionChevron expanded />
-          </button>
-        </div>
-      </header>
-
-      <div className="mb-8 flex flex-col gap-5 rounded-xl border border-neutral-800/80 bg-neutral-950/50 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-4 min-w-0">
-          <span
-            className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${hasConnectedBank ? "bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.4)]" : "bg-amber-400/90 shadow-[0_0_10px_rgba(251,191,36,0.35)]"}`}
-            aria-hidden
-          />
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
-              Payout destination
-            </p>
-            <p className="mt-1.5 text-sm font-semibold text-white">
-              {hasConnectedBank ? "Bank linked" : "Bank not connected"}
-            </p>
-            {!hasConnectedBank && (
-              <p className="mt-1 text-xs text-neutral-500 leading-relaxed max-w-md">
-                Stripe holds your bank details securely. Connect once to receive withdrawals from PolyPayd.
+        <FintechCard id="withdraw-funds-panel" className="scroll-mt-4">
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 id="withdraw-funds-heading" className="text-lg font-semibold text-[#F9FAFB] sm:text-xl">
+                Withdraw
+              </h2>
+              <p className="mt-1 text-sm text-[#6B7280]">
+                Available{" "}
+                <span className="font-semibold tabular-nums text-[#F9FAFB]">
+                  {formatMoneyGbp(availableToWithdrawGbp)}
+                </span>
+                {pendingNote ? <span className="block mt-1 font-normal">{pendingNote}</span> : null}
               </p>
-            )}
-            {hasConnectedBank && (
-              <p className="mt-1 text-xs text-neutral-500">You’re set up to receive withdrawals.</p>
-            )}
+            </div>
+            <FintechButton variant="ghost" type="button" onClick={() => setOpen(false)} className="min-h-9 px-3 text-xs">
+              Close
+            </FintechButton>
           </div>
-        </div>
-        <button
-          type="button"
-          onClick={handleConnectBank}
-          disabled={connectLoading}
-          className="shrink-0 rounded-xl border border-neutral-600 bg-neutral-900/40 px-5 py-3 text-sm font-semibold text-neutral-100 transition-colors hover:border-neutral-500 hover:bg-neutral-800/60 hover:text-white disabled:opacity-50 w-full sm:w-auto"
-        >
-          {connectLoading ? "Opening secure setup…" : hasConnectedBank ? "Update bank details" : "Connect bank account"}
-        </button>
-      </div>
 
-      {connectError && (
-        <div
-          className="mb-6 rounded-xl border border-red-500/15 bg-red-950/25 px-4 py-3"
-          role="status"
-        >
-          <p className="text-sm leading-snug text-red-200/90">{connectError}</p>
-        </div>
-      )}
-
-      <div className="mb-8 rounded-xl border border-neutral-800/60 bg-neutral-950/30 px-5 py-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
-          Available to withdraw
-        </p>
-        <p className="mt-1.5 text-3xl font-semibold tabular-nums tracking-tight text-white">
-          {formatMoneyGbp(availableToWithdrawGbp)}
-        </p>
-        {pendingNote ? (
-          <p className="mt-3 max-w-lg text-sm leading-relaxed text-neutral-500">{pendingNote}</p>
-        ) : (
-          <p className="mt-3 text-sm text-neutral-600 leading-relaxed">
-            Only cleared, available balance can be sent to your bank—not pending top-ups.
-          </p>
-        )}
-      </div>
-
-      <form onSubmit={handleWithdraw} className="space-y-5">
-        <div>
-          <label htmlFor="withdraw-amount" className="mb-2 block text-sm font-semibold text-neutral-200">
-            Amount
-          </label>
-          <p className="text-xs text-neutral-500 mb-3">Enter the amount to send. Fees are shown before you confirm.</p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-            <input
-              id="withdraw-amount"
-              type="number"
-              step="0.01"
-              min="1"
-              value={amount}
-              onChange={(e) => {
-                setAmount(e.target.value);
-                setWithdrawalError(null);
-              }}
-              aria-invalid={withdrawInputInvalid}
-              aria-describedby={
-                withdrawInputInvalid ? "withdraw-amount-feedback" : withdrawBlockedHint ? "withdraw-blocked-hint" : undefined
-              }
-              className={`min-h-[52px] w-full flex-1 rounded-xl border bg-neutral-950/60 px-4 py-3 text-lg text-white tabular-nums placeholder:text-neutral-600 outline-none transition-[border,box-shadow] focus:ring-2 focus:ring-emerald-500/20 ${
-                withdrawInputInvalid
-                  ? "border-red-500/50 focus:border-red-400/70"
-                  : "border-neutral-700/90 focus:border-emerald-600/50"
-              }`}
-              placeholder="0.00"
-              disabled={loading}
-            />
-            <button
-              type="submit"
-              disabled={!canSubmitWithdraw}
-              className="min-h-[52px] shrink-0 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-neutral-950 shadow-sm transition-colors hover:bg-neutral-100 disabled:opacity-40 disabled:cursor-not-allowed sm:min-w-[188px]"
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${hasConnectedBank ? "bg-[#22C55E]" : "bg-[#F59E0B]"}`}
+                aria-hidden
+              />
+              <div>
+                <p className="text-xs font-medium text-[#6B7280]">Bank</p>
+                <p className="text-sm font-medium text-[#F9FAFB]">
+                  {hasConnectedBank ? "Connected" : "Not connected"}
+                </p>
+              </div>
+            </div>
+            <FintechButton
+              variant="secondary"
+              type="button"
+              onClick={handleConnectBank}
+              disabled={connectLoading}
+              className="w-full sm:w-auto"
             >
-              {loading ? "Processing…" : "Withdraw to bank"}
-            </button>
+              {connectLoading ? "Opening…" : hasConnectedBank ? "Update bank" : "Connect bank"}
+            </FintechButton>
           </div>
-          {withdrawBlockedHint && !withdrawInputInvalid && (
-            <p id="withdraw-blocked-hint" className="mt-3 text-sm text-neutral-500 leading-relaxed">
-              {withdrawBlockedHint}
+
+          {connectError ? (
+            <p className="mb-6 text-sm text-[#EF4444]/90" role="status">
+              {connectError}
             </p>
-          )}
-          {withdrawInputInvalid && (
-            <div
-              id="withdraw-amount-feedback"
-              className="mt-3 rounded-xl border border-red-500/20 bg-red-950/20 px-4 py-3 text-sm text-red-100/90"
-              role="alert"
-            >
-              <p className="font-medium text-red-100">{withdrawalEval.message}</p>
-              {withdrawalEval.hint ? (
-                <p className="mt-1.5 text-xs leading-relaxed text-red-200/75">{withdrawalEval.hint}</p>
+          ) : null}
+
+          <form onSubmit={handleWithdraw} className="space-y-6">
+            <div>
+              <label htmlFor="withdraw-amount" className="mb-2 block text-xs font-medium text-[#9CA3AF]">
+                Amount (GBP)
+              </label>
+              <FintechInput
+                id="withdraw-amount"
+                type="number"
+                step="0.01"
+                min="1"
+                value={amount}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                  setWithdrawalError(null);
+                }}
+                aria-invalid={withdrawInputInvalid}
+                aria-describedby={
+                  withdrawInputInvalid ? "withdraw-amount-feedback" : withdrawBlockedHint ? "withdraw-blocked-hint" : undefined
+                }
+                className={`text-2xl font-semibold tabular-nums sm:text-3xl ${
+                  withdrawInputInvalid ? "border-[#EF4444]/40 ring-[#EF4444]/15" : ""
+                }`}
+                placeholder="0.00"
+                disabled={loading}
+              />
+              {withdrawBlockedHint && !withdrawInputInvalid ? (
+                <p id="withdraw-blocked-hint" className="mt-2 text-sm text-[#6B7280]">
+                  {withdrawBlockedHint}
+                </p>
+              ) : null}
+              {withdrawInputInvalid ? (
+                <p id="withdraw-amount-feedback" className="mt-2 text-sm text-[#EF4444]" role="alert">
+                  {withdrawalEval.message}
+                  {withdrawalEval.hint ? ` ${withdrawalEval.hint}` : ""}
+                </p>
               ) : null}
             </div>
-          )}
-        </div>
-        {withdrawalPreview && (
-          <div className="rounded-xl border border-neutral-800/80 bg-neutral-950/45 px-4 py-3 text-sm text-neutral-400">
-            <p className="mb-2 text-xs font-medium text-neutral-500">
-              {withdrawalPreview.feeMode === "charged_separately"
-                ? "Fee charged separately — you receive your full withdrawal amount."
-                : "Fee deducted from this withdrawal — your balance isn’t enough to pay the fee on top."}
+
+            {withdrawalPreview ? (
+              <div className="space-y-2 border-t border-white/[0.05] pt-5 text-sm">
+                <p className="text-xs text-[#6B7280]">
+                  {withdrawalPreview.feeMode === "charged_separately"
+                    ? "Fee charged on top — you receive the full amount below."
+                    : "Fee deducted from this withdrawal."}
+                </p>
+                <div className="flex justify-between gap-4 text-[#9CA3AF]">
+                  <span>Withdrawal</span>
+                  <span className="tabular-nums text-[#F9FAFB]">
+                    {formatMinorAsGbp(withdrawalPreview.withdrawalAmountMinor)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4 text-[#9CA3AF]">
+                  <span>Fee</span>
+                  <span className="tabular-nums text-[#F9FAFB]">
+                    {formatMinorAsGbp(withdrawalPreview.feeMinor)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4 text-[#9CA3AF]">
+                  <span>Wallet debit</span>
+                  <span className="tabular-nums text-[#F9FAFB]">
+                    {formatMinorAsGbp(withdrawalPreview.totalWalletDebitMinor)}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4 border-t border-white/[0.05] pt-3 text-base font-semibold text-[#F9FAFB]">
+                  <span>You receive</span>
+                  <span className="tabular-nums">{formatMinorAsGbp(withdrawalPreview.netPayoutMinor)}</span>
+                </div>
+              </div>
+            ) : null}
+
+            <FintechButton type="submit" disabled={!canSubmitWithdraw} block className="mt-2">
+              {loading ? "Processing…" : "Withdraw to bank"}
+            </FintechButton>
+          </form>
+
+          {withdrawalSuccess ? (
+            <p className="mt-6 text-sm leading-relaxed text-[#22C55E]" role="status">
+              {withdrawalSuccess.duplicate ? "Already submitted. " : ""}
+              {withdrawalSuccess.duplicate ? (
+                <>
+                  {formatMinorAsGbp(withdrawalSuccess.netMinor)} to your bank — wallet unchanged (
+                  {formatMinorAsGbp(withdrawalSuccess.requestedMinor)} requested, fee{" "}
+                  {formatMinorAsGbp(withdrawalSuccess.feeMinor)}).
+                </>
+              ) : (
+                <>
+                  {formatMinorAsGbp(withdrawalSuccess.walletDebitMinor)} debited.{" "}
+                  {formatMinorAsGbp(withdrawalSuccess.netMinor)} heading to your bank.
+                </>
+              )}
             </p>
-            <div className="flex justify-between gap-3">
-              <span>Withdrawal amount</span>
-              <span className="font-medium tabular-nums text-neutral-200">
-                {formatMinorAsGbp(withdrawalPreview.withdrawalAmountMinor)}
-              </span>
-            </div>
-            <div className="mt-2 flex justify-between gap-3">
-              <span>Fee</span>
-              <span className="font-medium tabular-nums text-neutral-200">
-                {formatMinorAsGbp(withdrawalPreview.feeMinor)}
-              </span>
-            </div>
-            <div className="mt-2 flex justify-between gap-3">
-              <span>Total wallet debit</span>
-              <span className="font-medium tabular-nums text-neutral-200">
-                {formatMinorAsGbp(withdrawalPreview.totalWalletDebitMinor)}
-              </span>
-            </div>
-            <div className="mt-2 flex justify-between gap-3 border-t border-neutral-800/80 pt-2">
-              <span className="text-neutral-300">You will receive</span>
-              <span className="font-semibold tabular-nums text-white">
-                {formatMinorAsGbp(withdrawalPreview.netPayoutMinor)}
-              </span>
-            </div>
-          </div>
-        )}
-      </form>
+          ) : null}
 
-      {withdrawalSuccess && (
-        <div
-          className="mt-6 rounded-xl border border-emerald-500/20 bg-emerald-950/20 px-5 py-4"
-          role="status"
-        >
-          <div className="mb-3">
-            <span className="inline-flex items-center rounded-md border border-emerald-500/25 bg-emerald-950/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300/95">
-              Submitted
-            </span>
-          </div>
-          <p className="text-sm font-semibold text-emerald-50">
-            {withdrawalSuccess.duplicate ? "Withdrawal already submitted" : "Withdrawal submitted"}
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-emerald-100/75">
-            {withdrawalSuccess.duplicate ? (
-              <>
-                {formatMinorAsGbp(withdrawalSuccess.netMinor)} to your bank was already submitted for this request.
-                Your wallet was not debited again (
-                {formatMinorAsGbp(withdrawalSuccess.requestedMinor)} requested,{" "}
-                {formatMinorAsGbp(withdrawalSuccess.feeMinor)} fee).
-              </>
-            ) : (
-              <>
-                {formatMinorAsGbp(withdrawalSuccess.walletDebitMinor)} debited from your wallet.{" "}
-                {formatMinorAsGbp(withdrawalSuccess.netMinor)} is on its way to your bank
-                {withdrawalSuccess.feeMode === "deducted_from_withdrawal"
-                  ? ` (${formatMinorAsGbp(withdrawalSuccess.feeMinor)} fee deducted from the withdrawal).`
-                  : ` (full ${formatMinorAsGbp(withdrawalSuccess.requestedMinor)} to your bank; ${formatMinorAsGbp(withdrawalSuccess.feeMinor)} fee taken separately from your wallet).`}
-              </>
-            )}
-          </p>
-        </div>
-      )}
-
-      {withdrawalError && (
-        <div
-          className="mt-6 rounded-xl border border-red-500/15 bg-red-950/20 px-5 py-4"
-          role="alert"
-        >
-          <p className="text-sm leading-relaxed text-red-100/90">{withdrawalError}</p>
-        </div>
-      )}
-    </section>
+          {withdrawalError ? (
+            <p className="mt-4 text-sm text-[#EF4444]/90" role="alert">
+              {withdrawalError}
+            </p>
+          ) : null}
+        </FintechCard>
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { mapClaimErrorMessage } from "@/lib/claimUiCopy";
+import { FintechButton } from "@/components/fintech";
 
 type Props = { token: string };
 
@@ -67,16 +68,11 @@ export function ClaimToWalletButton({ token }: Props) {
           {banner.detail ? <p className="mt-1.5 text-sm text-red-200/75 leading-relaxed">{banner.detail}</p> : null}
         </div>
       )}
-      <button
-        type="button"
-        disabled={pending}
-        onClick={onClaim}
-        className="w-full rounded-xl bg-emerald-600 px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-500 disabled:opacity-45 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950"
-      >
-        {pending ? "Processing…" : "Add to my wallet"}
-      </button>
-      <p className="text-center text-xs text-neutral-600 leading-relaxed">
-        By continuing you confirm this payout is intended for your signed-in account.
+      <FintechButton type="button" disabled={pending} onClick={onClaim} block>
+        {pending ? "Processing…" : "Claim funds"}
+      </FintechButton>
+      <p className="mt-3 text-center text-xs leading-relaxed text-[#6B7280]">
+        By continuing you confirm this payout is for your signed-in account.
       </p>
     </div>
   );

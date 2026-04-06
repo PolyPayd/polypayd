@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { createBatch } from "./actions";
 import { CreateBatchForm } from "./CreateBatchForm";
 import { ensureWalletForUser } from "@/lib/wallet";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { PageShell } from "@/components/fintech";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +15,9 @@ export default async function NewBatchPage({ params }: { params: Params }) {
 
   if (!orgId) {
     return (
-      <div className="p-6 text-red-500">Missing orgId in route.</div>
+      <PageShell>
+        <p className="text-sm text-[#EF4444]">Missing orgId in route.</p>
+      </PageShell>
     );
   }
 
@@ -26,19 +30,26 @@ export default async function NewBatchPage({ params }: { params: Params }) {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <div className="mx-auto max-w-4xl px-4 py-8">
-        <h1 className="mb-8 text-2xl font-semibold text-white">New Payout</h1>
-
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6">
-          <CreateBatchForm
-            orgId={orgId}
-            createBatch={createBatch}
-            spendableBalance={spendableBalance}
-            currency={currency}
-          />
-        </div>
+    <PageShell>
+      <Link
+        href="/app/batches"
+        className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-[#9CA3AF] transition-colors hover:text-[#F9FAFB]"
+      >
+        <span className="text-[#6B7280]" aria-hidden>
+          ←
+        </span>
+        Back to payouts
+      </Link>
+      <h1 className="text-xl font-semibold text-[#F9FAFB] sm:text-2xl">New payout</h1>
+      <p className="mt-2 text-sm text-[#6B7280]">Set up in a few steps—recipients and amounts come next.</p>
+      <div className="mt-8">
+        <CreateBatchForm
+          orgId={orgId}
+          createBatch={createBatch}
+          spendableBalance={spendableBalance}
+          currency={currency}
+        />
       </div>
-    </div>
+    </PageShell>
   );
 }

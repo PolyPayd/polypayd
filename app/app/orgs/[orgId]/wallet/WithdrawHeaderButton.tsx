@@ -1,15 +1,17 @@
 "use client";
 
+import { FintechButton } from "@/components/fintech";
+
 const OPEN_EVENT = "polypayd:open-withdraw-panel";
 
 export function WithdrawHeaderButton() {
   return (
-    <button
+    <FintechButton
       type="button"
+      variant="secondary"
       onClick={() => window.dispatchEvent(new CustomEvent(OPEN_EVENT))}
-      className="rounded-lg border border-neutral-600 bg-neutral-900/50 px-4 py-2 text-sm font-medium text-neutral-100 transition-colors hover:border-neutral-500 hover:bg-neutral-800/60"
     >
-      Withdraw to bank
-    </button>
+      Withdraw
+    </FintechButton>
   );
 }

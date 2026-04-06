@@ -19,40 +19,47 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <header className="sticky top-0 z-40 border-b border-neutral-800 bg-neutral-950/95 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3">
-          <div className="flex items-center gap-6">
-            <Link href="/app/profile" className="text-sm font-semibold text-white hover:text-neutral-200">
+    <div className="min-h-screen bg-[#0B0F14] text-[#F9FAFB]">
+      <header className="sticky top-0 z-40 border-b border-white/[0.05] bg-[#0B0F14]/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3.5 sm:px-5">
+          <div className="flex min-w-0 flex-1 items-center gap-5 sm:gap-8">
+            <Link
+              href="/app/wallet"
+              className="shrink-0 text-[15px] font-semibold tracking-tight text-[#F9FAFB] transition-opacity hover:opacity-90"
+            >
               PolyPayd
             </Link>
-            <nav className="flex items-center gap-3 text-sm">
-              <Link href="/app/wallet" className="text-neutral-400 hover:text-white">
-                Wallet
-              </Link>
-              <Link href="/app/batches" className="text-neutral-400 hover:text-white">
-                Payouts
-              </Link>
-              <Link href="/app/join-batch" className="text-neutral-400 hover:text-white">
-                Claim
-              </Link>
-              <Link href="/app/impact" className="text-neutral-400 hover:text-white">
-                Impact
-              </Link>
+            <nav className="flex flex-wrap items-center gap-1 sm:gap-2">
+              {(
+                [
+                  ["/app/wallet", "Wallet"],
+                  ["/app/batches", "Payouts"],
+                  ["/app/join-batch", "Claim"],
+                  ["/app/impact", "Impact"],
+                ] as const
+              ).map(([href, label]) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className="rounded-lg px-3 py-2 text-sm font-medium text-[#9CA3AF] transition-colors hover:bg-white/[0.04] hover:text-[#F9FAFB]"
+                >
+                  {label}
+                </Link>
+              ))}
             </nav>
           </div>
         </div>
       </header>
-      <main>{children}</main>
+      <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
       <Toaster
         theme="dark"
         position="top-center"
         toastOptions={{
           classNames: {
-            toast: "border border-neutral-800 bg-neutral-900 text-neutral-100 shadow-xl",
+            toast: "border border-white/[0.06] bg-[#121821] text-[#F9FAFB] shadow-xl",
             title: "text-white",
-            description: "text-neutral-400",
-            success: "border-emerald-500/30",
+            description: "text-[#9CA3AF]",
+            success: "border-[#22C55E]/20",
           },
         }}
       />

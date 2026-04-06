@@ -31,18 +31,18 @@ function clsx(...parts: Array<string | false | null | undefined>) {
 
 function statusBadge(status?: string | null) {
   const s = (status ?? "unknown").toLowerCase();
-  const base = "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border";
+  const base = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border";
 
-  if (s === "draft") return clsx(base, "border-neutral-700 text-neutral-200 bg-neutral-900/30");
-  if (s === "ready") return clsx(base, "border-blue-700 text-blue-200 bg-blue-900/20");
-  if (s === "processing") return clsx(base, "border-yellow-700 text-yellow-200 bg-yellow-900/20");
-  if (s === "funded") return clsx(base, "border-sky-700 text-sky-200 bg-sky-900/20");
-  if (s === "claiming") return clsx(base, "border-violet-700 text-violet-200 bg-violet-900/20");
-  if (s === "completed") return clsx(base, "border-emerald-700 text-emerald-200 bg-emerald-900/20");
-  if (s === "completed_with_errors") return clsx(base, "border-amber-700 text-amber-200 bg-amber-900/20");
-  if (s === "failed") return clsx(base, "border-red-700 text-red-200 bg-red-900/20");
+  if (s === "draft") return clsx(base, "border-white/[0.08] bg-white/[0.04] text-[#9CA3AF]");
+  if (s === "ready") return clsx(base, "border-[#3B82F6]/30 bg-[#3B82F6]/10 text-[#93C5FD]");
+  if (s === "processing") return clsx(base, "border-[#F59E0B]/30 bg-[#F59E0B]/10 text-[#FCD34D]");
+  if (s === "funded") return clsx(base, "border-[#3B82F6]/25 bg-[#3B82F6]/8 text-[#93C5FD]");
+  if (s === "claiming") return clsx(base, "border-[#8B5CF6]/30 bg-[#8B5CF6]/10 text-[#C4B5FD]");
+  if (s === "completed") return clsx(base, "border-[#22C55E]/30 bg-[#22C55E]/10 text-[#86EFAC]");
+  if (s === "completed_with_errors") return clsx(base, "border-[#F59E0B]/30 bg-[#F59E0B]/10 text-[#FCD34D]");
+  if (s === "failed") return clsx(base, "border-[#EF4444]/30 bg-[#EF4444]/10 text-[#FCA5A5]");
 
-  return clsx(base, "border-neutral-700 text-neutral-200 bg-neutral-900/30");
+  return clsx(base, "border-white/[0.08] bg-white/[0.04] text-[#9CA3AF]");
 }
 
 export function PayoutList({ orgId, batches, showingArchived }: Props) {
@@ -86,10 +86,12 @@ export function PayoutList({ orgId, batches, showingArchived }: Props) {
 
   return (
     <div className="space-y-3">
-      {error ? <div className="rounded-lg border border-red-800/50 bg-red-950/20 p-3 text-sm text-red-200">{error}</div> : null}
+      {error ? (
+        <div className="rounded-2xl border border-[#EF4444]/20 bg-[#EF4444]/10 p-4 text-sm text-[#FCA5A5]">{error}</div>
+      ) : null}
 
       {!batches.length ? (
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-8 text-center text-neutral-400">
+        <div className="rounded-2xl border border-white/[0.05] bg-[#121821] p-10 text-center text-sm text-[#6B7280]">
           {emptyText}
         </div>
       ) : (
@@ -101,19 +103,19 @@ export function PayoutList({ orgId, batches, showingArchived }: Props) {
             const loading = isPending && pendingId === batch.id;
             return (
               <li key={batch.id} className="group relative">
-                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4 transition hover:border-neutral-700 hover:bg-neutral-800/50 focus-within:border-neutral-700 focus-within:bg-neutral-800/50">
+                <div className="rounded-2xl border border-white/[0.05] bg-[#121821] p-4 transition-colors duration-200 hover:border-white/[0.08] hover:bg-[#161F2B]">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <Link href={`/app/batches/${batch.id}`} className="min-w-0 flex-1 focus:outline-none">
                       <div>
-                        <span className="font-medium text-white">{batch.name ?? "Untitled payout"}</span>
+                        <span className="font-medium text-[#F9FAFB]">{batch.name ?? "Untitled payout"}</span>
                         <span
-                          className={clsx("ml-2", statusBadge(batch.status))}
+                          className={clsx("ml-2 align-middle", statusBadge(batch.status))}
                           title={batch.status ?? undefined}
                         >
                           {batchStatusDisplayLabel(batch.status)}
                         </span>
                       </div>
-                      <div className="mt-2 flex items-center gap-4 text-sm text-neutral-400">
+                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[#6B7280]">
                         <span>{moneyGBP(batch.total_amount)}</span>
                         <span>{batch.recipient_count ?? 0} recipients</span>
                         <span>
@@ -162,16 +164,16 @@ export function PayoutList({ orgId, batches, showingArchived }: Props) {
       )}
 
       {confirmDelete ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-xl border border-neutral-700 bg-neutral-900 p-5">
-            <h3 className="text-lg font-semibold">Delete this payout?</h3>
-            <p className="mt-2 text-sm text-neutral-300">Delete this payout? This cannot be undone.</p>
-            <p className="mt-1 text-xs text-neutral-500">{confirmDelete.name}</p>
-            <div className="mt-4 flex justify-end gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-white/[0.06] bg-[#121821] p-6 shadow-2xl">
+            <h3 className="text-lg font-semibold text-[#F9FAFB]">Delete this payout?</h3>
+            <p className="mt-2 text-sm text-[#9CA3AF]">This cannot be undone.</p>
+            <p className="mt-1 text-xs text-[#6B7280]">{confirmDelete.name}</p>
+            <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setConfirmDelete(null)}
-                className="rounded-md border border-neutral-700 px-3 py-2 text-sm hover:border-neutral-600"
+                className="rounded-xl border border-white/[0.08] bg-[#161F2B] px-4 py-2.5 text-sm font-medium text-[#F9FAFB] hover:border-white/[0.12]"
               >
                 Cancel
               </button>
@@ -179,7 +181,7 @@ export function PayoutList({ orgId, batches, showingArchived }: Props) {
                 type="button"
                 disabled={isPending}
                 onClick={() => runDelete(confirmDelete.id)}
-                className="rounded-md border border-red-800/70 px-3 py-2 text-sm text-red-300 hover:border-red-700 disabled:opacity-50"
+                className="rounded-xl border border-[#EF4444]/40 bg-[#EF4444]/15 px-4 py-2.5 text-sm font-semibold text-[#FCA5A5] hover:bg-[#EF4444]/25 disabled:opacity-50"
               >
                 Delete
               </button>

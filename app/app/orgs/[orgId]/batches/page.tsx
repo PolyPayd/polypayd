@@ -2,6 +2,7 @@ import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { auth } from "@clerk/nextjs/server";
 import { PayoutList } from "./PayoutList";
+import { PageShell } from "@/components/fintech";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,10 @@ export default async function BatchesPage({
   searchParams?: Promise<{ archived?: string }> | { archived?: string };
 }) {
   const { orgId } = await Promise.resolve(params as Promise<Params>);
-  const resolvedSearchParams = (await Promise.resolve(searchParams as any)) ?? {};
+  const resolvedSearchParams =
+    (await Promise.resolve(
+      searchParams as Promise<{ archived?: string }> | { archived?: string } | undefined
+    )) ?? {};
   const isArchived = resolvedSearchParams?.archived === "1";
 
   if (!orgId) {
@@ -64,53 +68,54 @@ export default async function BatchesPage({
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <div className="mx-auto max-w-4xl px-4 py-8">
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-white">Payouts</h1>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/app/batches"
-              className={`rounded-md border px-4 py-2 text-sm ${
-                !isArchived
-                  ? "border-white/30 bg-white/10 text-white"
-                  : "border-neutral-600 text-neutral-300 hover:bg-neutral-800"
-              }`}
-            >
-              Active
-            </Link>
-            <Link
-              href="/app/batches?archived=1"
-              className={`rounded-md border px-4 py-2 text-sm ${
-                isArchived
-                  ? "border-white/30 bg-white/10 text-white"
-                  : "border-neutral-600 text-neutral-300 hover:bg-neutral-800"
-              }`}
-            >
-              Archived
-            </Link>
-            <Link
-              href={`/app/batches/new`}
-              className="rounded-md bg-white/10 px-4 py-2 text-sm hover:bg-white/20"
-            >
-              New Payout
-            </Link>
-          </div>
+    <PageShell>
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-[#F9FAFB] sm:text-2xl">Payouts</h1>
+          <p className="mt-1 text-sm text-[#6B7280]">Manage bulk sends and claim links.</p>
         </div>
-
-        <PayoutList
-          orgId={orgId}
-          batches={(batches ?? []).map((b) => ({
-            id: b.id,
-            name: b.name,
-            status: b.status,
-            total_amount: b.total_amount,
-            recipient_count: b.recipient_count,
-            created_at: b.created_at,
-          }))}
-          showingArchived={isArchived}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/app/batches"
+            className={`rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
+              !isArchived
+                ? "border-[#3B82F6]/40 bg-[#3B82F6]/15 text-[#F9FAFB]"
+                : "border-white/[0.08] bg-[#121821] text-[#9CA3AF] hover:border-white/[0.12]"
+            }`}
+          >
+            Active
+          </Link>
+          <Link
+            href="/app/batches?archived=1"
+            className={`rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
+              isArchived
+                ? "border-[#3B82F6]/40 bg-[#3B82F6]/15 text-[#F9FAFB]"
+                : "border-white/[0.08] bg-[#121821] text-[#9CA3AF] hover:border-white/[0.12]"
+            }`}
+          >
+            Archived
+          </Link>
+          <Link
+            href="/app/batches/new"
+            className="rounded-xl bg-[#3B82F6] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB]"
+          >
+            New payout
+          </Link>
+        </div>
       </div>
-    </div>
+
+      <PayoutList
+        orgId={orgId}
+        batches={(batches ?? []).map((b) => ({
+          id: b.id,
+          name: b.name,
+          status: b.status,
+          total_amount: b.total_amount,
+          recipient_count: b.recipient_count,
+          created_at: b.created_at,
+        }))}
+        showingArchived={isArchived}
+      />
+    </PageShell>
   );
 }

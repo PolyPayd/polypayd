@@ -1,10 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-const inputClass =
-  "w-full max-w-md rounded-md border border-white/10 bg-white/5 px-3 py-2 text-white outline-none focus:border-white/30";
-const labelClass = "mb-2 block text-sm font-medium text-neutral-300";
+import { FintechButton, FintechCard, FintechInput } from "@/components/fintech";
 
 function formatMoney(amount: number, currency = "GBP") {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(amount);
@@ -13,7 +10,6 @@ function formatMoney(amount: number, currency = "GBP") {
 type CreateBatchFormProps = {
   orgId: string;
   createBatch: (formData: FormData) => Promise<void>;
-  /** pending_balance + current_balance (matches Claim Link send funding rules). */
   spendableBalance: number;
   currency: string;
 };
@@ -24,8 +20,15 @@ function isRedirectError(err: unknown): boolean {
   return typeof digest === "string" && digest.includes("NEXT_REDIRECT");
 }
 
+const labelClass = "mb-2 block text-xs font-medium text-[#9CA3AF]";
+
 export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency }: CreateBatchFormProps) {
+  const [step, setStep] = useState(1);
   const [batchType, setBatchType] = useState<"standard" | "claimable">("standard");
+  const [batchName, setBatchName] = useState("");
+  const [standardCurrency, setStandardCurrency] = useState("GBP");
+  const [claimCurrency, setClaimCurrency] = useState("GBP");
+  const [expiresAt, setExpiresAt] = useState("");
   const [claimableTotalPool, setClaimableTotalPool] = useState("");
   const [claimableMaxRecipients, setClaimableMaxRecipients] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -42,6 +45,12 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
   const canSubmitClaimable =
     batchType !== "claimable" || (maxRecipientsValid && !exceedsBalance && evenSplitValid);
 
+  const canGoStep2 = batchName.trim().length > 0;
+  const canGoStep3 =
+    batchType === "standard"
+      ? true
+      : Boolean(expiresAt.trim()) && maxRecipientsValid && !exceedsBalance && evenSplitValid && totalNum > 0;
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitError(null);
@@ -56,179 +65,264 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
     }
   };
 
+  const steps = [
+    { n: 1, label: "Setup" },
+    { n: 2, label: batchType === "claimable" ? "Pool" : "Details" },
+    { n: 3, label: "Review" },
+  ];
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-8">
       <input type="hidden" name="orgId" value={orgId} />
       <input type="hidden" name="batchType" value={batchType} />
+      <input type="hidden" name="name" value={batchName} />
+      <input
+        type="hidden"
+        name="currency"
+        value={batchType === "standard" ? standardCurrency : claimCurrency}
+      />
+      {batchType === "claimable" ? (
+        <>
+          <input type="hidden" name="totalPoolAmount" value={claimableTotalPool} />
+          <input type="hidden" name="maxClaims" value={claimableMaxRecipients} />
+          <input type="hidden" name="expiresAt" value={expiresAt} />
+        </>
+      ) : null}
 
-      <div>
-        <span className={labelClass}>Payout type</span>
-        <div className="mt-2 flex flex-wrap gap-4">
-          <label className="inline-flex cursor-pointer items-center gap-2">
-            <input
-              type="radio"
-              name="batchTypeRadio"
-              value="standard"
-              checked={batchType === "standard"}
-              onChange={() => setBatchType("standard")}
-              className="rounded-full border-neutral-600 bg-neutral-900 text-white focus:ring-neutral-500"
-            />
-            <span className="text-neutral-200 font-medium">Bulk Send</span>
-            <span className="block w-full text-xs text-neutral-400 -mt-1 ml-0">
-              Send payments to many people instantly
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {steps.map((s) => (
+          <div key={s.n} className="flex items-center gap-3">
+            <span
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                step >= s.n ? "bg-[#3B82F6] text-white" : "border border-white/[0.08] bg-[#161F2B] text-[#6B7280]"
+              }`}
+            >
+              {s.n}
             </span>
-          </label>
-          <label className="inline-flex cursor-pointer items-center gap-2">
-            <input
-              type="radio"
-              name="batchTypeRadio"
-              value="claimable"
-              checked={batchType === "claimable"}
-              onChange={() => setBatchType("claimable")}
-              className="rounded-full border-neutral-600 bg-neutral-900 text-white focus:ring-neutral-500"
-            />
-            <span className="text-neutral-200 font-medium">Claim Link</span>
-            <span className="block w-full text-xs text-neutral-400 -mt-1 ml-0">
-              Create a link recipients can claim from
+            <span className={`text-sm font-medium ${step >= s.n ? "text-[#F9FAFB]" : "text-[#6B7280]"}`}>
+              {s.label}
             </span>
-          </label>
-        </div>
+            {s.n < 3 ? (
+              <span className="hidden h-px w-8 bg-white/[0.08] sm:block" aria-hidden />
+            ) : null}
+          </div>
+        ))}
       </div>
 
-      <div>
-        <label htmlFor="name" className={labelClass}>
-          Batch name
-        </label>
-        <input
-          id="name"
-          name="name"
-          type="text"
-          required
-          className={inputClass}
-          placeholder="Enter batch name"
-        />
-      </div>
-
-      {batchType === "standard" && (
-        <div>
-          <label htmlFor="currency" className={labelClass}>
-            Currency
-          </label>
-          <input
-            id="currency"
-            name="currency"
-            type="text"
-            defaultValue="GBP"
-            className={inputClass}
-            placeholder="e.g. GBP"
-          />
-        </div>
+      {step === 1 && (
+        <FintechCard>
+          <h2 className="text-lg font-semibold text-[#F9FAFB] sm:text-xl">Payout type</h2>
+          <p className="mt-1 text-sm text-[#6B7280]">Choose how you want to pay people.</p>
+          <div className="mt-6 space-y-4">
+            <label className="flex cursor-pointer gap-3 rounded-xl border border-white/[0.06] bg-[#161F2B]/50 p-4 transition-colors has-[:checked]:border-[#3B82F6]/40">
+              <input
+                type="radio"
+                name="batchTypeRadio"
+                value="standard"
+                checked={batchType === "standard"}
+                onChange={() => setBatchType("standard")}
+                className="mt-1 border-[#6B7280] text-[#3B82F6] focus:ring-[#3B82F6]"
+              />
+              <span>
+                <span className="font-medium text-[#F9FAFB]">Bulk send</span>
+                <span className="mt-1 block text-sm text-[#6B7280]">Pay many recipients from a spreadsheet.</span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer gap-3 rounded-xl border border-white/[0.06] bg-[#161F2B]/50 p-4 transition-colors has-[:checked]:border-[#3B82F6]/40">
+              <input
+                type="radio"
+                name="batchTypeRadio"
+                value="claimable"
+                checked={batchType === "claimable"}
+                onChange={() => setBatchType("claimable")}
+                className="mt-1 border-[#6B7280] text-[#3B82F6] focus:ring-[#3B82F6]"
+              />
+              <span>
+                <span className="font-medium text-[#F9FAFB]">Claim link</span>
+                <span className="mt-1 block text-sm text-[#6B7280]">Share a link; recipients join, then you fund.</span>
+              </span>
+            </label>
+          </div>
+          <div className="mt-8">
+            <label htmlFor="name" className={labelClass}>
+              Batch name
+            </label>
+            <FintechInput
+              id="name"
+              type="text"
+              required
+              placeholder="e.g. March bonuses"
+              value={batchName}
+              onChange={(e) => setBatchName(e.target.value)}
+            />
+          </div>
+          <div className="mt-6 flex justify-end">
+            <FintechButton type="button" onClick={() => setStep(2)} disabled={!canGoStep2}>
+              Continue
+            </FintechButton>
+          </div>
+        </FintechCard>
       )}
 
-      {batchType === "claimable" && (
-        <>
-          <p className="max-w-md text-xs text-neutral-400">
-            A unique batch code will be generated after creation. Recipients use it to join until the batch expires or reaches the max recipient limit.
+      {step === 2 && (
+        <FintechCard>
+          <h2 className="text-lg font-semibold text-[#F9FAFB] sm:text-xl">
+            {batchType === "claimable" ? "Pool & limits" : "Currency"}
+          </h2>
+          <p className="mt-1 text-sm text-[#6B7280]">
+            {batchType === "claimable"
+              ? "Total pool, expiry, and how many people can join."
+              : "Currency for this batch."}
           </p>
-          <p className="max-w-md text-xs text-amber-200/80">
-            Payouts are split evenly by default. You can adjust individual recipient amounts later after recipients join.
-          </p>
-          <div>
-            <label htmlFor="currency-claimable" className={labelClass}>
-              Currency
-            </label>
-            <input
-              id="currency-claimable"
-              name="currency"
-              type="text"
-              defaultValue="GBP"
-              className={inputClass}
-              placeholder="e.g. GBP"
-            />
-          </div>
-          <div>
-            <label htmlFor="totalPoolAmount" className={labelClass}>
-              Total amount to distribute
-            </label>
-            <p className="mb-1 text-xs text-neutral-400">
-              Spendable for this pool: {formatMoney(spendableBalance, currency)} (pending + available)
-            </p>
-            <input
-              id="totalPoolAmount"
-              name="totalPoolAmount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              required
-              className={inputClass}
-              placeholder="e.g. 300.00"
-              value={claimableTotalPool}
-              onChange={(e) => setClaimableTotalPool(e.target.value)}
-            />
-            {exceedsBalance && (
-              <p className="mt-1 text-sm text-red-400">
-                Insufficient spendable balance. You can fund up to {formatMoney(spendableBalance, currency)} (pending + available); this batch total is {formatMoney(totalNum, currency)}.
-              </p>
-            )}
-          </div>
-          <div>
-            <label htmlFor="expiresAt" className={labelClass}>
-              Expiry date & time
-            </label>
-            <input
-              id="expiresAt"
-              name="expiresAt"
-              type="datetime-local"
-              required
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label htmlFor="maxClaims" className={labelClass}>
-              Max recipients
-            </label>
-            <input
-              id="maxClaims"
-              name="maxClaims"
-              type="number"
-              min={1}
-              required
-              className={inputClass}
-              placeholder="e.g. 10"
-              value={claimableMaxRecipients}
-              onChange={(e) => setClaimableMaxRecipients(e.target.value)}
-            />
-            <p className="mt-1 text-xs text-neutral-500">Maximum number of recipients who can join this batch.</p>
-          </div>
-          {totalNum > 0 && (
-            <div className="rounded-lg border border-neutral-700 bg-neutral-900/30 px-3 py-2 text-sm text-neutral-300">
-              {!maxRecipientsValid
-                ? "Enter max recipients to see the per-recipient amount."
-                : evenSplitValid
-                  ? `${formatMoney(perRecipient, currency)} per recipient (even split)`
-                  : "Total must divide evenly by max recipients to 2 decimal places."}
+
+          {batchType === "standard" && (
+            <div className="mt-6">
+              <label htmlFor="currency" className={labelClass}>
+                Currency
+              </label>
+              <FintechInput
+                id="currency"
+                type="text"
+                placeholder="GBP"
+                value={standardCurrency}
+                onChange={(e) => setStandardCurrency(e.target.value)}
+              />
             </div>
           )}
-        </>
+
+          {batchType === "claimable" && (
+            <div className="mt-6 space-y-5">
+              <p className="text-sm text-[#6B7280]">
+                Recipients join with a code until the batch fills or expires. You can adjust per-person amounts after
+                they join.
+              </p>
+              <div>
+                <label htmlFor="currency-claimable" className={labelClass}>
+                  Currency
+                </label>
+                <FintechInput
+                  id="currency-claimable"
+                  type="text"
+                  value={claimCurrency}
+                  onChange={(e) => setClaimCurrency(e.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="totalPoolAmount" className={labelClass}>
+                  Total pool
+                </label>
+                <p className="mb-2 text-xs text-[#6B7280]">
+                  Spendable: {formatMoney(spendableBalance, currency)}
+                </p>
+                <FintechInput
+                  id="totalPoolAmount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  placeholder="300.00"
+                  value={claimableTotalPool}
+                  onChange={(e) => setClaimableTotalPool(e.target.value)}
+                />
+                {exceedsBalance && (
+                  <p className="mt-2 text-sm text-[#EF4444]">
+                    Exceeds spendable balance ({formatMoney(spendableBalance, currency)}).
+                  </p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="expiresAt" className={labelClass}>
+                  Expires
+                </label>
+                <FintechInput
+                  id="expiresAt"
+                  type="datetime-local"
+                  required
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="maxClaims" className={labelClass}>
+                  Max recipients
+                </label>
+                <FintechInput
+                  id="maxClaims"
+                  type="number"
+                  min={1}
+                  required
+                  placeholder="10"
+                  value={claimableMaxRecipients}
+                  onChange={(e) => setClaimableMaxRecipients(e.target.value)}
+                />
+              </div>
+              {totalNum > 0 && (
+                <p className="text-sm text-[#9CA3AF]">
+                  {!maxRecipientsValid
+                    ? "Enter max recipients for per-person amount."
+                    : evenSplitValid
+                      ? `${formatMoney(perRecipient, currency)} each (even split).`
+                      : "Total must divide evenly by max recipients to 2 decimal places."}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="mt-8 flex flex-wrap justify-between gap-3">
+            <FintechButton type="button" variant="secondary" onClick={() => setStep(1)}>
+              Back
+            </FintechButton>
+            <FintechButton type="button" onClick={() => setStep(3)} disabled={batchType === "claimable" && !canGoStep3}>
+              Continue
+            </FintechButton>
+          </div>
+        </FintechCard>
       )}
 
-      {submitError && (
-        <p className="text-sm text-red-400">{submitError}</p>
+      {step === 3 && (
+        <FintechCard>
+          <h2 className="text-lg font-semibold text-[#F9FAFB] sm:text-xl">Review</h2>
+          <p className="mt-1 text-sm text-[#6B7280]">Confirm before creating.</p>
+          <dl className="mt-6 space-y-3 text-sm">
+            <div className="flex justify-between gap-4">
+              <dt className="text-[#6B7280]">Name</dt>
+              <dd className="font-medium text-[#F9FAFB]">{batchName || "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-[#6B7280]">Type</dt>
+              <dd className="font-medium text-[#F9FAFB]">{batchType === "claimable" ? "Claim link" : "Bulk send"}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-[#6B7280]">Currency</dt>
+              <dd className="text-[#F9FAFB]">{batchType === "standard" ? standardCurrency : claimCurrency}</dd>
+            </div>
+            {batchType === "claimable" && (
+              <>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-[#6B7280]">Pool</dt>
+                  <dd className="tabular-nums text-[#F9FAFB]">{formatMoney(totalNum, claimCurrency)}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-[#6B7280]">Max recipients</dt>
+                  <dd className="text-[#F9FAFB]">{maxNum || "—"}</dd>
+                </div>
+              </>
+            )}
+          </dl>
+          {submitError && <p className="mt-4 text-sm text-[#EF4444]">{submitError}</p>}
+          <div className="mt-8 flex flex-wrap justify-between gap-3">
+            <FintechButton type="button" variant="secondary" onClick={() => setStep(2)}>
+              Back
+            </FintechButton>
+            <FintechButton
+              type="submit"
+              disabled={batchType === "claimable" && (exceedsBalance || !evenSplitValid || !canSubmitClaimable)}
+            >
+              Create payout
+            </FintechButton>
+          </div>
+        </FintechCard>
       )}
-
-      <button
-        type="submit"
-        disabled={batchType === "claimable" && (exceedsBalance || !evenSplitValid)}
-        className="inline-flex items-center rounded-md bg-white px-4 py-2 text-sm font-medium text-black hover:bg-white/90 disabled:opacity-50 disabled:pointer-events-none"
-      >
-        Create Payout
-      </button>
-
-      <p className="text-xs text-neutral-500">
-        {batchType === "claimable" && exceedsBalance
-          ? "Add funds from Wallet or reduce the batch total to continue."
-          : "If nothing happens, check the terminal for the exact error."}
-      </p>
     </form>
   );
 }

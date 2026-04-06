@@ -5,6 +5,7 @@ import { calculateTopupChargeFromWalletCredit } from "@/lib/payments/pricing";
 import { useRouter } from "next/navigation";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
+import { FintechButton } from "@/components/fintech";
 
 type Props = {
   orgId: string;
@@ -89,13 +90,9 @@ function CheckoutForm({ orgId, onSuccess }: CheckoutFormProps) {
       <PaymentElement />
       {error && <p className="text-sm text-red-400">{error}</p>}
       <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={loading || !stripe || !elements}
-          className="rounded-lg border border-emerald-700/60 bg-emerald-950/30 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-900/40 disabled:opacity-50"
-        >
+        <FintechButton type="submit" disabled={loading || !stripe || !elements}>
           {loading ? "Processing…" : "Pay now"}
-        </button>
+        </FintechButton>
       </div>
     </form>
   );
@@ -256,27 +253,25 @@ export function AddFundsButton({ orgId, addFundsBlockedReason }: Props) {
 
   return (
     <>
-      <button
+      <FintechButton
         type="button"
         onClick={() => setOpen(true)}
         disabled={blocked}
         title={addFundsBlockedReason ?? undefined}
-        className="rounded-lg border border-emerald-700/60 bg-emerald-950/30 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-900/40 disabled:cursor-not-allowed disabled:opacity-45"
       >
         Add funds
-      </button>
+      </FintechButton>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-xl border border-neutral-700 bg-neutral-900 p-6 shadow-xl">
-            <h2 className="text-lg font-semibold text-white mb-4">Add funds with Stripe</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-white/[0.06] bg-[#121821] p-6 shadow-2xl">
+            <h2 className="mb-4 text-lg font-semibold text-[#F9FAFB]">Add funds</h2>
 
             {blocked && (
-              <div className="mb-4 rounded-lg border border-amber-700/40 bg-amber-950/25 px-3 py-2.5 text-sm text-amber-100/95">
+              <div className="mb-4 rounded-xl border border-[#F59E0B]/20 bg-[#F59E0B]/10 px-4 py-3 text-sm text-[#FCD34D]">
                 {addFundsBlockedReason}
-                <p className="mt-2 text-xs text-amber-200/80">
-                  Use &quot;Connect bank&quot; / Connect onboarding from your wallet until Stripe shows charges
-                  enabled, then you can fund your wallet.
+                <p className="mt-2 text-xs text-[#9CA3AF]">
+                  Complete Connect onboarding until card payments are enabled, then add funds.
                 </p>
               </div>
             )}
@@ -284,7 +279,7 @@ export function AddFundsButton({ orgId, addFundsBlockedReason }: Props) {
             {!clientSecret ? (
               <form onSubmit={handleCreateIntent} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-neutral-400 mb-1">Amount to add to wallet (GBP)</label>
+                  <label className="mb-2 block text-xs font-medium text-[#9CA3AF]">Amount (GBP)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -292,7 +287,7 @@ export function AddFundsButton({ orgId, addFundsBlockedReason }: Props) {
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     disabled={blocked}
-                    className="w-full rounded-lg border border-neutral-600 bg-neutral-800 px-3 py-2 text-white placeholder-neutral-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50"
+                    className="w-full rounded-xl border border-white/[0.06] bg-[#161F2B] px-4 py-3 text-[#F9FAFB] placeholder-[#6B7280] focus:border-[#3B82F6]/50 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/25 disabled:opacity-50"
                     placeholder="10.00"
                     required
                   />
@@ -324,9 +319,10 @@ export function AddFundsButton({ orgId, addFundsBlockedReason }: Props) {
                   Payment is processed on your Stripe Connect account; the platform fee is taken as an
                   application fee. Your wallet credit matches the amount you choose above.
                 </p>
-                <div className="flex gap-2 justify-end pt-2">
-                  <button
+                <div className="flex flex-wrap justify-end gap-2 pt-2">
+                  <FintechButton
                     type="button"
+                    variant="secondary"
                     onClick={() => {
                       setOpen(false);
                       setError(null);
@@ -335,17 +331,12 @@ export function AddFundsButton({ orgId, addFundsBlockedReason }: Props) {
                       setStripeAccountForPi(null);
                       setTopupBreakdown(null);
                     }}
-                    className="rounded-lg border border-neutral-600 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
                   >
                     Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loadingIntent || blocked}
-                    className="rounded-lg border border-emerald-700/60 bg-emerald-950/30 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-900/40 disabled:opacity-50"
-                  >
-                    {loadingIntent ? "Starting…" : "Continue to payment"}
-                  </button>
+                  </FintechButton>
+                  <FintechButton type="submit" disabled={loadingIntent || blocked}>
+                    {loadingIntent ? "Starting…" : "Continue"}
+                  </FintechButton>
                 </div>
               </form>
             ) : (
@@ -387,26 +378,27 @@ export function AddFundsButton({ orgId, addFundsBlockedReason }: Props) {
                   />
                   {success && <p className="mt-3 text-sm text-emerald-300">{success}</p>}
                   <div className="mt-4 flex justify-end">
-                    <button
+                    <FintechButton
                       type="button"
+                      variant="secondary"
                       onClick={() => {
                         setClientSecret(null);
                         setStripeAccountForPi(null);
                         setTopupBreakdown(null);
                         setError(null);
                       }}
-                      className="rounded-lg border border-neutral-600 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
                     >
                       Change amount
-                    </button>
+                    </FintechButton>
                   </div>
                 </>
               )
             )}
 
             <div className="mt-4 flex justify-end">
-              <button
+              <FintechButton
                 type="button"
+                variant="ghost"
                 onClick={() => {
                   setOpen(false);
                   setError(null);
@@ -415,10 +407,9 @@ export function AddFundsButton({ orgId, addFundsBlockedReason }: Props) {
                   setStripeAccountForPi(null);
                   setTopupBreakdown(null);
                 }}
-                className="rounded-lg border border-neutral-600 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
               >
                 Close
-              </button>
+              </FintechButton>
             </div>
           </div>
         </div>
