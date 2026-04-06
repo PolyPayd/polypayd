@@ -338,78 +338,71 @@ export function WithdrawTestPanel({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex w-full items-center justify-between gap-4 rounded-2xl border border-white/[0.05] bg-[#121821] px-5 py-5 text-left transition-all duration-200 hover:border-white/[0.08] hover:bg-[#161F2B] sm:px-6 sm:py-6"
+          className="flex w-full items-center justify-between gap-4 rounded-2xl bg-[#121821] px-5 py-4 text-left transition-colors duration-200 hover:bg-[#161F2B]/90 sm:py-5"
           aria-expanded="false"
           aria-controls="withdraw-funds-panel"
         >
           <div className="min-w-0">
-            <p className="text-base font-semibold text-[#F9FAFB]">Withdraw to bank</p>
-            <p className="mt-1 text-sm text-[#6B7280]">
+            <p className="text-sm font-semibold text-[#F9FAFB]">Withdraw to bank</p>
+            <p className="mt-0.5 text-sm text-[#6B7280]">
               {isZeroAvailable ? "Available when funds clear." : "Send to your linked account."}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <p className="text-right text-sm tabular-nums text-[#9CA3AF]">
-              <span className="block text-xs font-medium text-[#6B7280]">Up to</span>
+              <span className="block text-[11px] font-medium text-[#6B7280]">Up to</span>
               {formatMoneyGbp(availableToWithdrawGbp)}
             </p>
             <AccordionChevron expanded={false} />
           </div>
         </button>
       ) : (
-        <FintechCard id="withdraw-funds-panel" className="scroll-mt-4">
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 id="withdraw-funds-heading" className="text-lg font-semibold text-[#F9FAFB] sm:text-xl">
-                Withdraw
-              </h2>
-              <p className="mt-1 text-sm text-[#6B7280]">
-                Available{" "}
-                <span className="font-semibold tabular-nums text-[#F9FAFB]">
-                  {formatMoneyGbp(availableToWithdrawGbp)}
-                </span>
-                {pendingNote ? <span className="block mt-1 font-normal">{pendingNote}</span> : null}
-              </p>
-            </div>
-            <FintechButton variant="ghost" type="button" onClick={() => setOpen(false)} className="min-h-9 px-3 text-xs">
+        <FintechCard id="withdraw-funds-panel" interactive={false} className="scroll-mt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-[#6B7280]">
+              Available{" "}
+              <span className="font-semibold tabular-nums text-[#F9FAFB]">
+                {formatMoneyGbp(availableToWithdrawGbp)}
+              </span>
+              {pendingNote ? <span className="mt-1 block font-normal text-[#6B7280]">{pendingNote}</span> : null}
+            </p>
+            <FintechButton variant="ghost" type="button" onClick={() => setOpen(false)} className="min-h-9 px-2 text-xs">
               Close
             </FintechButton>
           </div>
 
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2.5 text-sm text-[#9CA3AF]">
               <span
                 className={`h-2 w-2 shrink-0 rounded-full ${hasConnectedBank ? "bg-[#22C55E]" : "bg-[#F59E0B]"}`}
                 aria-hidden
               />
-              <div>
-                <p className="text-xs font-medium text-[#6B7280]">Bank</p>
-                <p className="text-sm font-medium text-[#F9FAFB]">
-                  {hasConnectedBank ? "Connected" : "Not connected"}
-                </p>
-              </div>
+              <span className="text-[#6B7280]">Bank</span>
+              <span className="font-medium text-[#F9FAFB]">
+                {hasConnectedBank ? "Connected" : "Not connected"}
+              </span>
             </div>
             <FintechButton
               variant="secondary"
               type="button"
               onClick={handleConnectBank}
               disabled={connectLoading}
-              className="w-full sm:w-auto"
+              className="w-full min-h-10 sm:w-auto"
             >
               {connectLoading ? "Opening…" : hasConnectedBank ? "Update bank" : "Connect bank"}
             </FintechButton>
           </div>
 
           {connectError ? (
-            <p className="mb-6 text-sm text-[#EF4444]/90" role="status">
+            <p className="mt-4 text-sm text-[#EF4444]/90" role="status">
               {connectError}
             </p>
           ) : null}
 
-          <form onSubmit={handleWithdraw} className="space-y-6">
+          <form onSubmit={handleWithdraw} className="mt-8 space-y-8">
             <div>
-              <label htmlFor="withdraw-amount" className="mb-2 block text-xs font-medium text-[#9CA3AF]">
-                Amount (GBP)
+              <label htmlFor="withdraw-amount" className="mb-2 block text-xs font-medium text-[#6B7280]">
+                Amount
               </label>
               <FintechInput
                 id="withdraw-amount"
@@ -445,38 +438,38 @@ export function WithdrawTestPanel({
             </div>
 
             {withdrawalPreview ? (
-              <div className="space-y-2 border-t border-white/[0.05] pt-5 text-sm">
-                <p className="text-xs text-[#6B7280]">
+              <div className="space-y-2.5 text-sm text-[#9CA3AF]">
+                <p className="text-xs leading-relaxed text-[#6B7280]">
                   {withdrawalPreview.feeMode === "charged_separately"
                     ? "Fee charged on top — you receive the full amount below."
                     : "Fee deducted from this withdrawal."}
                 </p>
-                <div className="flex justify-between gap-4 text-[#9CA3AF]">
+                <div className="flex justify-between gap-4">
                   <span>Withdrawal</span>
                   <span className="tabular-nums text-[#F9FAFB]">
                     {formatMinorAsGbp(withdrawalPreview.withdrawalAmountMinor)}
                   </span>
                 </div>
-                <div className="flex justify-between gap-4 text-[#9CA3AF]">
+                <div className="flex justify-between gap-4">
                   <span>Fee</span>
                   <span className="tabular-nums text-[#F9FAFB]">
                     {formatMinorAsGbp(withdrawalPreview.feeMinor)}
                   </span>
                 </div>
-                <div className="flex justify-between gap-4 text-[#9CA3AF]">
+                <div className="flex justify-between gap-4">
                   <span>Wallet debit</span>
                   <span className="tabular-nums text-[#F9FAFB]">
                     {formatMinorAsGbp(withdrawalPreview.totalWalletDebitMinor)}
                   </span>
                 </div>
-                <div className="flex justify-between gap-4 border-t border-white/[0.05] pt-3 text-base font-semibold text-[#F9FAFB]">
+                <div className="flex justify-between gap-4 pt-2 text-base font-semibold text-[#F9FAFB]">
                   <span>You receive</span>
                   <span className="tabular-nums">{formatMinorAsGbp(withdrawalPreview.netPayoutMinor)}</span>
                 </div>
               </div>
             ) : null}
 
-            <FintechButton type="submit" disabled={!canSubmitWithdraw} block className="mt-2">
+            <FintechButton type="submit" disabled={!canSubmitWithdraw} block className="min-h-12 text-[15px]">
               {loading ? "Processing…" : "Withdraw to bank"}
             </FintechButton>
           </form>

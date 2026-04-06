@@ -6,6 +6,8 @@ import { getClaimableBatchInfo, normalizeBatchCode } from "@/lib/claimableBatch"
 import { CLAIMABLE_SCHEMA_MESSAGE } from "@/lib/dbSchema";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { joinClaimableBatch } from "./actions";
+import { ClaimCodeToolbar } from "@/components/claim/ClaimCodeToolbar";
+import { FintechButton, FintechCard, FintechInput, PageShell } from "@/components/fintech";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +17,25 @@ function formatMoney(amount: number | null | undefined, currency = "GBP") {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(Number(amount ?? 0));
 }
 
+function errorMessage(errorParam: string): string {
+  if (errorParam === "schema") return CLAIMABLE_SCHEMA_MESSAGE;
+  if (errorParam === "not_found") return "Batch not found.";
+  if (errorParam === "not_claimable") return "This batch cannot be joined with a code.";
+  if (errorParam === "expired") return "This batch has expired.";
+  if (errorParam === "full") return "This batch is full and no longer accepting new joins.";
+  if (errorParam === "allocations_locked") return "This batch is no longer accepting claims.";
+  if (errorParam === "already_joined") return "You have already joined this batch.";
+  if (errorParam === "unauthorized") return "You must be signed in to join a batch.";
+  return "Something went wrong. Please try again.";
+}
+
 export default async function JoinBatchPage({
   searchParams,
 }: {
   searchParams?: Search | Promise<Search>;
 }) {
-  const sp = (await Promise.resolve(searchParams as any)) ?? ({} as Search);
+  const sp =
+    (await Promise.resolve(searchParams as Promise<Search> | Search | undefined)) ?? ({} as Search);
   const codeRaw = (sp.code ?? "").trim();
   const code = codeRaw ? normalizeBatchCode(codeRaw) : "";
   const joined = sp.joined === "1";
@@ -29,17 +44,14 @@ export default async function JoinBatchPage({
   const { userId } = await auth();
   if (!userId) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-6">
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-8 max-w-md text-center">
-          <p className="text-neutral-300">You must be signed in to join a batch.</p>
-          <Link
-            href="/sign-in"
-            className="mt-4 inline-block text-sm text-neutral-400 hover:text-white"
-          >
+      <PageShell narrow className="py-10">
+        <p className="text-center text-sm text-[#9CA3AF]">You must be signed in to join a batch.</p>
+        <div className="mt-6 flex justify-center">
+          <Link href="/sign-in" className="text-sm font-medium text-[#3B82F6] hover:text-[#60A5FA]">
             Sign in
           </Link>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
@@ -64,157 +76,128 @@ export default async function JoinBatchPage({
     allocationMode = info.allocationMode;
   }
 
+  const displayCode = batch ? formatBatchCodeForDisplay(batch.batch_code ?? code) : code || "—";
+  const canJoin = batch && statusType === "success" && !alreadyJoined && !!userId;
+
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <div className="mx-auto max-w-lg px-4 py-8">
-        <h1 className="text-2xl font-semibold text-white mb-6">Claim payout</h1>
+    <PageShell narrow className="py-8">
+      <h1 className="text-xl font-semibold tracking-tight text-[#F9FAFB] sm:text-2xl">Claim payout</h1>
+      <p className="mt-2 text-sm text-[#6B7280]">Enter a code or open an invite link.</p>
 
-        {errorParam && (
-          <div className="rounded-xl border border-red-800/50 bg-red-950/20 p-4 mb-6">
-            <p className="text-red-300 font-medium">
-              {errorParam === "schema" && CLAIMABLE_SCHEMA_MESSAGE}
-              {errorParam === "not_found" && "Batch not found."}
-              {errorParam === "not_claimable" && "This batch cannot be joined with a code."}
-              {errorParam === "expired" && "This batch has expired."}
-              {errorParam === "full" && "This batch is full and no longer accepting new joins."}
-              {errorParam === "allocations_locked" && "This batch is no longer accepting claims."}
-              {errorParam === "already_joined" && "You have already joined this batch."}
-              {errorParam === "unauthorized" && "You must be signed in to join a batch."}
-              {!["schema", "not_found", "not_claimable", "expired", "full", "allocations_locked", "already_joined", "unauthorized"].includes(errorParam) && "Something went wrong. Please try again."}
-            </p>
+      {errorParam ? (
+        <p className="mt-6 rounded-xl bg-[#EF4444]/10 px-4 py-3 text-sm text-[#FCA5A5]">{errorMessage(errorParam)}</p>
+      ) : null}
+
+      {joined ? (
+        <p className="mt-6 rounded-xl bg-[#22C55E]/10 px-4 py-3 text-sm text-[#86EFAC]">
+          You have successfully joined this batch.
+        </p>
+      ) : null}
+
+      <FintechCard interactive={false} className="mt-8">
+        <h2 className="text-base font-semibold text-[#F9FAFB]">Claim access</h2>
+        <p className="mt-1 text-sm text-[#6B7280]">Invite code</p>
+
+        <form action="/app/join-batch" method="get" className="mt-6 space-y-4">
+          <div>
+            <label htmlFor="code" className="sr-only">
+              Claim code
+            </label>
+            <FintechInput id="code" name="code" type="text" defaultValue={code} placeholder="Paste claim code" />
           </div>
-        )}
+          <FintechButton type="submit" className="min-h-11 w-full sm:w-auto">
+            Find payout
+          </FintechButton>
+        </form>
 
-        {joined && (
-          <div className="rounded-xl border border-emerald-800/50 bg-emerald-950/20 p-4 mb-6">
-            <p className="text-emerald-300 font-medium">You have successfully joined this batch.</p>
-          </div>
-        )}
-
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6 mb-6">
-          <form
-            action="/app/join-batch"
-            method="get"
-            className="space-y-4"
-          >
-            <div>
-              <label htmlFor="code" className="block text-sm font-medium text-neutral-300 mb-2">
-                Claim code
-              </label>
-              <input
-                id="code"
-                name="code"
-                type="text"
-                defaultValue={code}
-                placeholder="Paste claim code"
-                className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-500 outline-none focus:border-neutral-500"
-              />
+        {batch && statusType === "success" ? (
+          <div className="mt-8 border-t border-white/[0.05] pt-8">
+            <p className="text-xs font-medium text-[#6B7280]">Active code</p>
+            <p className="mt-2 font-mono text-lg font-semibold tracking-wide text-[#F9FAFB]">{displayCode}</p>
+            <div className="mt-4">
+              <ClaimCodeToolbar displayCode={displayCode} />
             </div>
-            <button
-              type="submit"
-              className="rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
-            >
-              Find payout
-            </button>
-          </form>
-        </div>
-
-        {code && (
-          <div
-            className={`rounded-xl border p-6 ${
-              batch && statusType === "success"
-                ? "border-emerald-800/50 bg-emerald-950/20"
-                : "border-neutral-800 bg-neutral-900/50"
-            }`}
-          >
-            <h2 className="text-lg font-semibold text-white mb-4">Claim result</h2>
-
-            {!batch ? (
-              <p className="text-red-300">{statusMessage}</p>
-            ) : (
-              <>
-                <dl className="space-y-3 text-sm">
-                  <div>
-                    <dt className="text-neutral-500">Batch name</dt>
-                    <dd className="font-medium text-neutral-200">{batch.name ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-neutral-500">Invite code</dt>
-                    <dd className="font-mono text-neutral-300">{formatBatchCodeForDisplay(batch.batch_code ?? code)}</dd>
-                  </div>
-                  {(nextClaimAmount != null && nextClaimAmount > 0) && (
-                    <div>
-                      <dt className="text-neutral-500">Amount you will receive</dt>
-                      <dd className="font-medium text-emerald-200">
-                        {formatMoney(nextClaimAmount, batch.currency ?? "GBP")}
-                      </dd>
-                    </div>
-                  )}
-                  {allocationMode === "custom" && (nextClaimAmount == null || nextClaimAmount <= 0) && batch && statusType === "success" && !alreadyJoined && (
-                    <div>
-                      <dt className="text-neutral-500">Claim amount</dt>
-                      <dd className="text-neutral-300 text-sm">Will be assigned from the next available slot.</dd>
-                    </div>
-                  )}
-                  <div>
-                    <dt className="text-neutral-500">Expires</dt>
-                    <dd className="text-neutral-300">
-                      {batch.expires_at ? formatExpiryDateTime(batch.expires_at) : "No expiry"}
-                    </dd>
-                    {batch.expires_at && (
-                      <>
-                        <dd className="text-xs text-neutral-500 mt-0.5">Timezone: Local time</dd>
-                        <dd className="text-xs text-neutral-400 mt-0.5">
-                          Time left: {formatExpiryTimeLeft(batch.expires_at)}
-                        </dd>
-                      </>
-                    )}
-                  </div>
-                  <div>
-                    <dt className="text-neutral-500">Max claims</dt>
-                    <dd className="text-neutral-300">{batch.max_claims ?? "—"}</dd>
-                  </div>
-                  {batch.batch_type === "claimable" && (
-                    <div>
-                      <dt className="text-neutral-500">Current claims</dt>
-                      <dd className="text-neutral-300">{currentClaims}</dd>
-                    </div>
-                  )}
-                  <div>
-                    <dt className="text-neutral-500">Status</dt>
-                    <dd className="text-neutral-300">{batch.status ?? "—"}</dd>
-                  </div>
-                </dl>
-
-                <div className="mt-4 pt-4 border-t border-neutral-800 space-y-4">
-                  <p
-                    className={
-                      statusType === "success"
-                        ? "text-emerald-300 font-medium"
-                        : "text-red-300 font-medium"
-                    }
-                  >
-                    {statusMessage}
-                  </p>
-                  {batch && statusType === "success" && !alreadyJoined && (
-                    <form action={joinClaimableBatch} className="pt-2">
-                      <input type="hidden" name="batchId" value={batch.id} />
-                      <input type="hidden" name="orgId" value={batch.org_id} />
-                      <input type="hidden" name="batchCode" value={batch.batch_code ?? code} />
-                      <button
-                        type="submit"
-                        className="rounded-lg border border-emerald-700/50 bg-emerald-900/30 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-800/40"
-                      >
-                        Claim payout
-                      </button>
-                    </form>
-                  )}
-                </div>
-              </>
-            )}
           </div>
-        )}
-      </div>
-    </div>
+        ) : null}
+      </FintechCard>
+
+      {code ? (
+        <FintechCard interactive={false} className="mt-6">
+          <h2 className="text-base font-semibold text-[#F9FAFB]">Campaign details</h2>
+
+          {!batch ? (
+            <p className="mt-4 text-sm text-[#FCA5A5]">{statusMessage ?? "Batch not found."}</p>
+          ) : (
+            <>
+              <dl className="mt-6 space-y-5 text-sm">
+                <div>
+                  <dt className="text-xs font-medium text-[#6B7280]">Name</dt>
+                  <dd className="mt-1 font-medium text-[#F9FAFB]">{batch.name ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-[#6B7280]">Pool</dt>
+                  <dd className="mt-1 tabular-nums text-[#F9FAFB]">{formatMoney(batch.total_amount, batch.currency ?? "GBP")}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-[#6B7280]">Recipients</dt>
+                  <dd className="mt-1 text-[#F9FAFB]">
+                    {currentClaims} joined
+                    {batch.max_claims != null ? ` · max ${batch.max_claims}` : ""}
+                  </dd>
+                </div>
+                {(nextClaimAmount != null && nextClaimAmount > 0) && (
+                  <div>
+                    <dt className="text-xs font-medium text-[#6B7280]">Your amount</dt>
+                    <dd className="mt-1 text-lg font-semibold tabular-nums text-[#22C55E]">
+                      {formatMoney(nextClaimAmount, batch.currency ?? "GBP")}
+                    </dd>
+                  </div>
+                )}
+                {allocationMode === "custom" && (nextClaimAmount == null || nextClaimAmount <= 0) && canJoin && (
+                  <div>
+                    <dt className="text-xs font-medium text-[#6B7280]">Your amount</dt>
+                    <dd className="mt-1 text-[#9CA3AF]">Assigned from the next open slot when you join.</dd>
+                  </div>
+                )}
+                <div>
+                  <dt className="text-xs font-medium text-[#6B7280]">Expires</dt>
+                  <dd className="mt-1 text-[#F9FAFB]">
+                    {batch.expires_at ? formatExpiryDateTime(batch.expires_at) : "No expiry"}
+                  </dd>
+                  {batch.expires_at ? (
+                    <dd className="mt-1 text-xs text-[#6B7280]">Time left: {formatExpiryTimeLeft(batch.expires_at)}</dd>
+                  ) : null}
+                </div>
+              </dl>
+
+              {statusMessage ? (
+                <p
+                  className={`mt-8 text-sm font-medium ${
+                    statusType === "success" ? "text-[#86EFAC]" : "text-[#FCA5A5]"
+                  }`}
+                >
+                  {statusMessage}
+                </p>
+              ) : null}
+
+              {canJoin ? (
+                <form action={joinClaimableBatch} className="mt-8">
+                  <input type="hidden" name="batchId" value={batch.id} />
+                  <input type="hidden" name="orgId" value={batch.org_id} />
+                  <input type="hidden" name="batchCode" value={batch.batch_code ?? code} />
+                  <FintechButton type="submit" className="min-h-12 w-full">
+                    Claim payout
+                  </FintechButton>
+                </form>
+              ) : null}
+
+              {alreadyJoined ? (
+                <p className="mt-6 text-sm font-medium text-[#86EFAC]">You have already joined this batch.</p>
+              ) : null}
+            </>
+          )}
+        </FintechCard>
+      ) : null}
+    </PageShell>
   );
 }

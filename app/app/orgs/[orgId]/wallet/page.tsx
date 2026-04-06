@@ -157,15 +157,15 @@ export default async function WalletPage({
       </Link>
 
       {/* Primary balance */}
-      <FintechCard elevated className="mb-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-[#6B7280]">Available balance</p>
-        <p className="mt-2 text-4xl font-bold tabular-nums tracking-tight text-[#F9FAFB] sm:text-[2.5rem]">
+      <FintechCard elevated interactive={false} className="mb-6 p-6 sm:p-8">
+        <p className="text-xs font-medium tracking-wide text-[#6B7280]">Available balance</p>
+        <p className="mt-3 text-[2rem] font-bold tabular-nums tracking-tight text-[#F9FAFB] sm:text-[2.5rem]">
           {money(available, currency)}
         </p>
         {pending > 0.005 && (
-          <p className="mt-3 text-sm text-[#9CA3AF]">
+          <p className="mt-4 text-sm text-[#9CA3AF]">
             <span className="text-[#6B7280]">Pending</span>{" "}
-            <span className="font-medium tabular-nums text-[#F9FAFB]">{money(pending, currency)}</span>
+            <span className="font-semibold tabular-nums text-[#F9FAFB]">{money(pending, currency)}</span>
             <span className="text-[#6B7280]"> · not withdrawable yet</span>
           </p>
         )}
@@ -175,9 +175,13 @@ export default async function WalletPage({
           </p>
         )}
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <AddFundsButton orgId={orgId} addFundsBlockedReason={addFundsBlockedReason} />
-          <WithdrawHeaderButton />
+        <div className="mt-8 flex w-full flex-col gap-3 sm:max-w-xl sm:flex-row sm:items-stretch">
+          <div className="w-full sm:flex-1">
+            <AddFundsButton orgId={orgId} addFundsBlockedReason={addFundsBlockedReason} className="h-12 w-full" />
+          </div>
+          <div className="w-full sm:flex-1">
+            <WithdrawHeaderButton className="h-12 w-full" />
+          </div>
         </div>
       </FintechCard>
 
@@ -190,43 +194,52 @@ export default async function WalletPage({
         />
       </div>
 
-      {/* Secondary stats */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <FintechCard>
-          <p className="text-xs font-medium text-[#6B7280]">Added (cards)</p>
-          <p className="mt-2 text-lg font-semibold tabular-nums text-[#F9FAFB]">
-            {money(totals.totalFunded, currency)}
-          </p>
-        </FintechCard>
-        <FintechCard>
-          <p className="text-xs font-medium text-[#6B7280]">Withdrawn</p>
-          <p className="mt-2 text-lg font-semibold tabular-nums text-[#F9FAFB]">
-            {money(totals.totalSent, currency)}
-          </p>
-        </FintechCard>
-        <div className="sm:col-span-1">
-          <ImpactWalletCard userImpactTotal={userImpactTotal} currency={currency} schemaReady={impactSchemaReady} />
+      {/* Summary: one surface */}
+      <FintechCard interactive={false} className="mb-8 p-5 sm:p-6">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-0">
+          <div>
+            <p className="text-xs font-medium text-[#6B7280]">Added (cards)</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-[#F9FAFB] sm:text-2xl">
+              {money(totals.totalFunded, currency)}
+            </p>
+          </div>
+          <div className="sm:border-l sm:border-white/[0.05] sm:pl-8">
+            <p className="text-xs font-medium text-[#6B7280]">Withdrawn</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-[#F9FAFB] sm:text-2xl">
+              {money(totals.totalSent, currency)}
+            </p>
+          </div>
+          <div className="sm:border-l sm:border-white/[0.05] sm:pl-8">
+            <ImpactWalletCard
+              embedded
+              userImpactTotal={userImpactTotal}
+              currency={currency}
+              schemaReady={impactSchemaReady}
+            />
+          </div>
         </div>
-      </div>
+      </FintechCard>
 
       {/* Activity */}
-      <FintechCard>
-        <h2 className="text-lg font-semibold text-[#F9FAFB]">Transactions</h2>
+      <FintechCard interactive={false}>
+        <h2 className="text-lg font-semibold tracking-tight text-[#F9FAFB]">Transactions</h2>
         <p className="mt-1 text-sm text-[#6B7280]">Recent credits and debits</p>
 
         {recentRows.length === 0 ? (
-          <div className="mt-6 rounded-xl border border-dashed border-white/[0.06] bg-[#0B0F14]/50 py-12 text-center">
+          <div className="mt-8 py-10 text-center">
             <p className="text-sm font-medium text-[#9CA3AF]">No activity yet</p>
             <p className="mx-auto mt-2 max-w-sm text-sm text-[#6B7280]">
               Add funds or receive a payout to see transactions here.
             </p>
           </div>
         ) : (
-          <ul className="mt-6 divide-y divide-white/[0.05]">
-            {recentRows.map((r) => (
+          <ul className="mt-8 space-y-0">
+            {recentRows.map((r, i) => (
               <li
                 key={r.id}
-                className="flex flex-wrap items-start justify-between gap-3 py-4 first:pt-0 transition-colors hover:bg-white/[0.02] sm:flex-nowrap sm:px-1 sm:-mx-1 sm:rounded-lg"
+                className={`flex flex-wrap items-start justify-between gap-3 py-4 transition-colors hover:bg-white/[0.02] sm:flex-nowrap sm:rounded-lg sm:px-2 sm:-mx-2 ${
+                  i > 0 ? "border-t border-white/[0.04]" : ""
+                }`}
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-[#F9FAFB]">{r.typeLabel}</p>

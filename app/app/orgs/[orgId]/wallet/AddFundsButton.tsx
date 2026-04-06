@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { FintechButton } from "@/components/fintech";
+import { cn } from "@/lib/cn";
 
 type Props = {
   orgId: string;
   /** When set, the user cannot add funds until Connect + charges are ready. */
   addFundsBlockedReason: string | null;
+  className?: string;
 };
 
 type CreateIntentResult = {
@@ -144,7 +146,7 @@ function ElementsOnConnectedAccount({
   );
 }
 
-export function AddFundsButton({ orgId, addFundsBlockedReason }: Props) {
+export function AddFundsButton({ orgId, addFundsBlockedReason, className }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
@@ -258,6 +260,7 @@ export function AddFundsButton({ orgId, addFundsBlockedReason }: Props) {
         onClick={() => setOpen(true)}
         disabled={blocked}
         title={addFundsBlockedReason ?? undefined}
+        className={cn("min-h-12", className)}
       >
         Add funds
       </FintechButton>

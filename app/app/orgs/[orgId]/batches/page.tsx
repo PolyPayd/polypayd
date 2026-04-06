@@ -77,27 +77,23 @@ export default async function BatchesPage({
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/app/batches"
-            className={`rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
-              !isArchived
-                ? "border-[#3B82F6]/40 bg-[#3B82F6]/15 text-[#F9FAFB]"
-                : "border-white/[0.08] bg-[#121821] text-[#9CA3AF] hover:border-white/[0.12]"
+            className={`rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
+              !isArchived ? "bg-[#3B82F6]/15 text-[#F9FAFB]" : "text-[#9CA3AF] hover:bg-white/[0.04] hover:text-[#F9FAFB]"
             }`}
           >
             Active
           </Link>
           <Link
             href="/app/batches?archived=1"
-            className={`rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
-              isArchived
-                ? "border-[#3B82F6]/40 bg-[#3B82F6]/15 text-[#F9FAFB]"
-                : "border-white/[0.08] bg-[#121821] text-[#9CA3AF] hover:border-white/[0.12]"
+            className={`rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
+              isArchived ? "bg-[#3B82F6]/15 text-[#F9FAFB]" : "text-[#9CA3AF] hover:bg-white/[0.04] hover:text-[#F9FAFB]"
             }`}
           >
             Archived
           </Link>
           <Link
             href="/app/batches/new"
-            className="rounded-xl bg-[#3B82F6] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB]"
+            className="rounded-xl bg-[#3B82F6] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#2563EB]"
           >
             New payout
           </Link>

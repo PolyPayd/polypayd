@@ -110,11 +110,11 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
       </div>
 
       {step === 1 && (
-        <FintechCard>
-          <h2 className="text-lg font-semibold text-[#F9FAFB] sm:text-xl">Payout type</h2>
+        <FintechCard interactive={false}>
+          <h2 className="text-lg font-semibold tracking-tight text-[#F9FAFB] sm:text-xl">Payout type</h2>
           <p className="mt-1 text-sm text-[#6B7280]">Choose how you want to pay people.</p>
-          <div className="mt-6 space-y-4">
-            <label className="flex cursor-pointer gap-3 rounded-xl border border-white/[0.06] bg-[#161F2B]/50 p-4 transition-colors has-[:checked]:border-[#3B82F6]/40">
+          <div className="mt-8 space-y-3">
+            <label className="flex cursor-pointer gap-4 rounded-2xl border border-transparent bg-[#0B0F14]/55 px-4 py-4 transition-colors has-[:checked]:border-[#3B82F6]/35 has-[:checked]:bg-[#3B82F6]/10">
               <input
                 type="radio"
                 name="batchTypeRadio"
@@ -124,11 +124,13 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
                 className="mt-1 border-[#6B7280] text-[#3B82F6] focus:ring-[#3B82F6]"
               />
               <span>
-                <span className="font-medium text-[#F9FAFB]">Bulk send</span>
-                <span className="mt-1 block text-sm text-[#6B7280]">Pay many recipients from a spreadsheet.</span>
+                <span className="font-semibold text-[#F9FAFB]">Bulk send</span>
+                <span className="mt-1 block text-sm leading-relaxed text-[#6B7280]">
+                  Pay many recipients from a spreadsheet.
+                </span>
               </span>
             </label>
-            <label className="flex cursor-pointer gap-3 rounded-xl border border-white/[0.06] bg-[#161F2B]/50 p-4 transition-colors has-[:checked]:border-[#3B82F6]/40">
+            <label className="flex cursor-pointer gap-4 rounded-2xl border border-transparent bg-[#0B0F14]/55 px-4 py-4 transition-colors has-[:checked]:border-[#3B82F6]/35 has-[:checked]:bg-[#3B82F6]/10">
               <input
                 type="radio"
                 name="batchTypeRadio"
@@ -138,12 +140,14 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
                 className="mt-1 border-[#6B7280] text-[#3B82F6] focus:ring-[#3B82F6]"
               />
               <span>
-                <span className="font-medium text-[#F9FAFB]">Claim link</span>
-                <span className="mt-1 block text-sm text-[#6B7280]">Share a link; recipients join, then you fund.</span>
+                <span className="font-semibold text-[#F9FAFB]">Claim link</span>
+                <span className="mt-1 block text-sm leading-relaxed text-[#6B7280]">
+                  Share a link; recipients join, then you fund.
+                </span>
               </span>
             </label>
           </div>
-          <div className="mt-8">
+          <div className="mt-10 space-y-2">
             <label htmlFor="name" className={labelClass}>
               Batch name
             </label>
@@ -156,8 +160,8 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
               onChange={(e) => setBatchName(e.target.value)}
             />
           </div>
-          <div className="mt-6 flex justify-end">
-            <FintechButton type="button" onClick={() => setStep(2)} disabled={!canGoStep2}>
+          <div className="mt-10 flex justify-end">
+            <FintechButton type="button" className="min-h-12 px-8" onClick={() => setStep(2)} disabled={!canGoStep2}>
               Continue
             </FintechButton>
           </div>
@@ -165,8 +169,8 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
       )}
 
       {step === 2 && (
-        <FintechCard>
-          <h2 className="text-lg font-semibold text-[#F9FAFB] sm:text-xl">
+        <FintechCard interactive={false}>
+          <h2 className="text-lg font-semibold tracking-tight text-[#F9FAFB] sm:text-xl">
             {batchType === "claimable" ? "Pool & limits" : "Currency"}
           </h2>
           <p className="mt-1 text-sm text-[#6B7280]">
@@ -176,7 +180,7 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
           </p>
 
           {batchType === "standard" && (
-            <div className="mt-6">
+            <div className="mt-8">
               <label htmlFor="currency" className={labelClass}>
                 Currency
               </label>
@@ -191,7 +195,7 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
           )}
 
           {batchType === "claimable" && (
-            <div className="mt-6 space-y-5">
+            <div className="mt-8 space-y-6">
               <p className="text-sm text-[#6B7280]">
                 Recipients join with a code until the batch fills or expires. You can adjust per-person amounts after
                 they join.
@@ -268,11 +272,16 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
             </div>
           )}
 
-          <div className="mt-8 flex flex-wrap justify-between gap-3">
-            <FintechButton type="button" variant="secondary" onClick={() => setStep(1)}>
+          <div className="mt-10 flex flex-wrap justify-between gap-3">
+            <FintechButton type="button" variant="secondary" className="min-h-12" onClick={() => setStep(1)}>
               Back
             </FintechButton>
-            <FintechButton type="button" onClick={() => setStep(3)} disabled={batchType === "claimable" && !canGoStep3}>
+            <FintechButton
+              type="button"
+              className="min-h-12 px-8"
+              onClick={() => setStep(3)}
+              disabled={batchType === "claimable" && !canGoStep3}
+            >
               Continue
             </FintechButton>
           </div>
@@ -280,10 +289,10 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
       )}
 
       {step === 3 && (
-        <FintechCard>
-          <h2 className="text-lg font-semibold text-[#F9FAFB] sm:text-xl">Review</h2>
+        <FintechCard interactive={false}>
+          <h2 className="text-lg font-semibold tracking-tight text-[#F9FAFB] sm:text-xl">Review</h2>
           <p className="mt-1 text-sm text-[#6B7280]">Confirm before creating.</p>
-          <dl className="mt-6 space-y-3 text-sm">
+          <dl className="mt-8 space-y-4 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-[#6B7280]">Name</dt>
               <dd className="font-medium text-[#F9FAFB]">{batchName || "—"}</dd>
@@ -309,13 +318,14 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
               </>
             )}
           </dl>
-          {submitError && <p className="mt-4 text-sm text-[#EF4444]">{submitError}</p>}
-          <div className="mt-8 flex flex-wrap justify-between gap-3">
-            <FintechButton type="button" variant="secondary" onClick={() => setStep(2)}>
+          {submitError && <p className="mt-6 text-sm text-[#EF4444]">{submitError}</p>}
+          <div className="mt-10 flex flex-wrap justify-between gap-3">
+            <FintechButton type="button" variant="secondary" className="min-h-12" onClick={() => setStep(2)}>
               Back
             </FintechButton>
             <FintechButton
               type="submit"
+              className="min-h-12 px-8"
               disabled={batchType === "claimable" && (exceedsBalance || !evenSplitValid || !canSubmitClaimable)}
             >
               Create payout

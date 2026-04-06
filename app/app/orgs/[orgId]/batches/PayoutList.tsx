@@ -31,18 +31,18 @@ function clsx(...parts: Array<string | false | null | undefined>) {
 
 function statusBadge(status?: string | null) {
   const s = (status ?? "unknown").toLowerCase();
-  const base = "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium border";
+  const base = "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium";
 
-  if (s === "draft") return clsx(base, "border-white/[0.08] bg-white/[0.04] text-[#9CA3AF]");
-  if (s === "ready") return clsx(base, "border-[#3B82F6]/30 bg-[#3B82F6]/10 text-[#93C5FD]");
-  if (s === "processing") return clsx(base, "border-[#F59E0B]/30 bg-[#F59E0B]/10 text-[#FCD34D]");
-  if (s === "funded") return clsx(base, "border-[#3B82F6]/25 bg-[#3B82F6]/8 text-[#93C5FD]");
-  if (s === "claiming") return clsx(base, "border-[#8B5CF6]/30 bg-[#8B5CF6]/10 text-[#C4B5FD]");
-  if (s === "completed") return clsx(base, "border-[#22C55E]/30 bg-[#22C55E]/10 text-[#86EFAC]");
-  if (s === "completed_with_errors") return clsx(base, "border-[#F59E0B]/30 bg-[#F59E0B]/10 text-[#FCD34D]");
-  if (s === "failed") return clsx(base, "border-[#EF4444]/30 bg-[#EF4444]/10 text-[#FCA5A5]");
+  if (s === "draft") return clsx(base, "bg-white/[0.06] text-[#9CA3AF]");
+  if (s === "ready") return clsx(base, "bg-[#3B82F6]/12 text-[#93C5FD]");
+  if (s === "processing") return clsx(base, "bg-[#F59E0B]/12 text-[#FCD34D]");
+  if (s === "funded") return clsx(base, "bg-[#3B82F6]/10 text-[#93C5FD]");
+  if (s === "claiming") return clsx(base, "bg-[#8B5CF6]/12 text-[#C4B5FD]");
+  if (s === "completed") return clsx(base, "bg-[#22C55E]/12 text-[#86EFAC]");
+  if (s === "completed_with_errors") return clsx(base, "bg-[#F59E0B]/12 text-[#FCD34D]");
+  if (s === "failed") return clsx(base, "bg-[#EF4444]/12 text-[#FCA5A5]");
 
-  return clsx(base, "border-white/[0.08] bg-white/[0.04] text-[#9CA3AF]");
+  return clsx(base, "bg-white/[0.06] text-[#9CA3AF]");
 }
 
 export function PayoutList({ orgId, batches, showingArchived }: Props) {
@@ -85,17 +85,17 @@ export function PayoutList({ orgId, batches, showingArchived }: Props) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {error ? (
-        <div className="rounded-2xl border border-[#EF4444]/20 bg-[#EF4444]/10 p-4 text-sm text-[#FCA5A5]">{error}</div>
+        <p className="rounded-2xl bg-[#EF4444]/10 px-4 py-3 text-sm text-[#FCA5A5]">{error}</p>
       ) : null}
 
       {!batches.length ? (
-        <div className="rounded-2xl border border-white/[0.05] bg-[#121821] p-10 text-center text-sm text-[#6B7280]">
+        <div className="rounded-2xl border border-white/[0.04] bg-[#121821] px-4 py-12 text-center text-sm text-[#6B7280]">
           {emptyText}
         </div>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-2">
           {batches.map((batch) => {
             const status = String(batch.status ?? "").toLowerCase();
             const canDelete = status === "draft" || status === "processing";
@@ -103,20 +103,22 @@ export function PayoutList({ orgId, batches, showingArchived }: Props) {
             const loading = isPending && pendingId === batch.id;
             return (
               <li key={batch.id} className="group relative">
-                <div className="rounded-2xl border border-white/[0.05] bg-[#121821] p-4 transition-colors duration-200 hover:border-white/[0.08] hover:bg-[#161F2B]">
+                <div className="rounded-2xl border border-white/[0.04] bg-[#121821] p-3.5 transition-colors duration-200 hover:bg-[#161F2B]/40 sm:p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <Link href={`/app/batches/${batch.id}`} className="min-w-0 flex-1 focus:outline-none">
-                      <div>
-                        <span className="font-medium text-[#F9FAFB]">{batch.name ?? "Untitled payout"}</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[15px] font-semibold text-[#F9FAFB]">
+                          {batch.name ?? "Untitled payout"}
+                        </span>
                         <span
-                          className={clsx("ml-2 align-middle", statusBadge(batch.status))}
+                          className={clsx("align-middle", statusBadge(batch.status))}
                           title={batch.status ?? undefined}
                         >
                           {batchStatusDisplayLabel(batch.status)}
                         </span>
                       </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[#6B7280]">
-                        <span>{moneyGBP(batch.total_amount)}</span>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[#6B7280]">
+                        <span className="tabular-nums">{moneyGBP(batch.total_amount)}</span>
                         <span>{batch.recipient_count ?? 0} recipients</span>
                         <span>
                           {batch.created_at
