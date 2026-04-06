@@ -2,7 +2,7 @@ import { cn } from "@/lib/cn";
 
 function initialsFromName(name: string, email: string) {
   const n = name.trim();
-  if (n.length >= 2) {
+  if (n.length >= 2 && n !== "Account") {
     const parts = n.split(/\s+/).filter(Boolean);
     if (parts.length >= 2) {
       return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
@@ -10,18 +10,19 @@ function initialsFromName(name: string, email: string) {
     return n.slice(0, 2).toUpperCase();
   }
   const local = email.split("@")[0] ?? "";
-  return (local.slice(0, 2) || "??").toUpperCase();
+  return (local.slice(0, 2) || "PP").toUpperCase();
 }
 
 type Props = {
   name: string;
   email: string;
   imageUrl: string | null | undefined;
-  /** Opens avatar actions when set (Monzo-style tap on photo). */
   onPress?: () => void;
+  /** Loading overlay on the circle */
+  busy?: boolean;
 };
 
-export function ProfileAvatar({ name, email, imageUrl, onPress }: Props) {
+export function ProfileAvatar({ name, email, imageUrl, onPress, busy }: Props) {
   const initials = initialsFromName(name || email, email);
 
   const visual = imageUrl ? (
@@ -29,16 +30,35 @@ export function ProfileAvatar({ name, email, imageUrl, onPress }: Props) {
     <img
       src={imageUrl}
       alt=""
-      className="h-[4.5rem] w-[4.5rem] rounded-full object-cover ring-2 ring-white/[0.08]"
+      className="h-full w-full rounded-full object-cover"
       referrerPolicy="no-referrer"
     />
   ) : (
     <div
-      className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-[#161F2B] text-lg font-semibold tracking-tight text-[#F9FAFB] ring-2 ring-white/[0.08]"
+      className="flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-[#1e3a5f] via-[#162536] to-[#0f1419] text-xl font-semibold tracking-tight text-[#E2E8F0] ring-1 ring-white/[0.06]"
       aria-hidden
     >
       {initials}
     </div>
+  );
+
+  const circle = (
+    <span
+      className={cn(
+        "relative flex h-[5.25rem] w-[5.25rem] shrink-0 items-center justify-center overflow-hidden rounded-full ring-2 ring-white/[0.1] ring-offset-2 ring-offset-[#0B0F14] transition-shadow",
+        onPress && "shadow-[0_0_0_1px_rgba(255,255,255,0.06)] group-hover:ring-[#3B82F6]/25 group-hover:shadow-[0_0_20px_-4px_rgba(59,130,246,0.35)]"
+      )}
+    >
+      {visual}
+      {busy ? (
+        <span className="absolute inset-0 flex items-center justify-center rounded-full bg-[#0B0F14]/65 backdrop-blur-[2px]">
+          <span
+            className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/90"
+            aria-hidden
+          />
+        </span>
+      ) : null}
+    </span>
   );
 
   if (onPress) {
@@ -46,16 +66,17 @@ export function ProfileAvatar({ name, email, imageUrl, onPress }: Props) {
       <button
         type="button"
         onClick={onPress}
+        disabled={busy}
         className={cn(
-          "rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3B82F6]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0F14]",
-          "transition-transform active:scale-[0.98]"
+          "group rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3B82F6]/55 focus-visible:ring-offset-4 focus-visible:ring-offset-[#0B0F14]",
+          "transition-transform active:scale-[0.97] disabled:pointer-events-none disabled:opacity-70"
         )}
-        aria-label="Profile photo options"
+        aria-label="Manage profile photo"
       >
-        {visual}
+        {circle}
       </button>
     );
   }
 
-  return visual;
+  return circle;
 }
