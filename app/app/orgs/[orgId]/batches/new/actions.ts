@@ -138,7 +138,7 @@ export async function createBatch(formData: FormData) {
     redirect(`/app/batches/${data.id}`);
   }
 
-  // Standard batch: preserve existing behaviour
+  // Standard batch: New payout UI uses a client-only Bulk Send preview; this insert path remains for programmatic/legacy use.
   const { data, error } = await supabase
     .from("batches")
     .insert({
