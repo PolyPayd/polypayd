@@ -10,6 +10,8 @@ const isPublicRoute = createRouteMatcher([
   // Stripe webhook must be public
   "/api/webhooks/stripe",
 
+  "/api/webhooks/clerk",
+
   // Admin-only manual RPC trigger (guarded by POLYPAYD_ADMIN_RELEASE_SECRET on the route)
   "/api/internal/stripe/balance-available-release",
 ]);
