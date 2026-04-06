@@ -146,24 +146,24 @@ export default async function WalletPage({
         Back to payouts
       </Link>
 
-      {/* Primary balance */}
+      {/* Primary balance — account identity + available funds */}
       <FintechCard elevated interactive={false} className="mb-6 p-6 sm:p-8">
-        <p className="text-xs font-medium tracking-wide text-[#6B7280]">Available balance</p>
-        <p className="mt-3 text-[2rem] font-bold tabular-nums tracking-tight text-[#F9FAFB] sm:text-[2.5rem]">
+        <p className="text-[15px] font-medium text-[#9CA3AF]">PolyPayd</p>
+        <p className="mt-2 text-xs font-medium text-[#6B7280]">Available balance</p>
+        <p className="mt-2 text-[2.125rem] font-bold tabular-nums leading-none tracking-tight text-[#F9FAFB] sm:text-[2.75rem]">
           {money(available, currency)}
         </p>
-        {pending > 0.005 && (
-          <p className="mt-4 text-sm text-[#9CA3AF]">
-            <span className="text-[#6B7280]">Pending</span>{" "}
-            <span className="font-semibold tabular-nums text-[#F9FAFB]">{money(pending, currency)}</span>
-            <span className="text-[#6B7280]"> · not withdrawable yet</span>
+        {pending > 0.005 ? (
+          <p className="mt-4 text-xs leading-relaxed text-[#6B7280]">
+            Pending <span className="tabular-nums text-[#9CA3AF]">{money(pending, currency)}</span>
+            <span className="text-[#5C6570]"> · not withdrawable yet</span>
           </p>
-        )}
-        {totals.totalFromInternalClaims > 0.005 && (
-          <p className="mt-3 text-xs leading-relaxed text-[#6B7280]">
+        ) : null}
+        {totals.totalFromInternalClaims > 0.005 ? (
+          <p className="mt-3 text-[11px] leading-relaxed text-[#5C6570]">
             Includes {money(totals.totalFromInternalClaims, currency)} from batch claims.
           </p>
-        )}
+        ) : null}
 
         <div className="mt-8 flex w-full flex-col gap-3 sm:max-w-xl sm:flex-row sm:items-stretch">
           <div className="w-full sm:flex-1">
