@@ -27,6 +27,7 @@ import {
 import { fetchClerkRecipientProfiles } from "@/lib/clerkUserDisplay";
 import { formatRecipientLifecycleLabel, resolveRecipientDisplay } from "@/lib/recipientDisplay";
 import { getPublicSiteUrl } from "@/lib/publicSiteUrl";
+import { FintechCard } from "@/components/fintech";
 
 export const dynamic = "force-dynamic";
 
@@ -621,12 +622,24 @@ export default async function BatchDetailsPage({
           >
             ← Back to payouts
           </Link>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold truncate">{batch.name ?? "Untitled batch"}</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight text-[#F9FAFB] truncate">
+              {batch.name ?? "Untitled batch"}
+            </h1>
             <span className={statusBadge(batch.status)} title={batch.status ?? undefined}>
               {batchStatusDisplayLabel(batch.status)}
             </span>
           </div>
+          {isClaimable && batch.created_at ? (
+            <p className="mt-2 text-sm text-[#6B7280]">
+              Created{" "}
+              {new Date(batch.created_at).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              })}
+            </p>
+          ) : null}
 
           <details className="mt-3 text-xs text-neutral-600">
             <summary className="cursor-pointer text-neutral-500 hover:text-neutral-400 select-none">
@@ -705,157 +718,149 @@ export default async function BatchDetailsPage({
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
-        {isClaimable ? (
-          <>
-            <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/30 p-5 sm:p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
-              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">Payout pool</div>
-              <div className="text-2xl sm:text-3xl font-semibold tabular-nums text-white tracking-tight">
-                {moneyGBP(batch.total_amount)}
-              </div>
-              <p className="text-xs text-neutral-500 mt-2 leading-relaxed">Total amount in this Claim Link pool.</p>
+      {/* Stats — bulk send only */}
+      {!isClaimable ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+          <div className="rounded-xl border border-neutral-800 p-4">
+            <div className="text-sm text-neutral-400">Total</div>
+            <div className="text-2xl font-semibold">{moneyGBP(batch.total_amount)}</div>
+          </div>
+          <div className="rounded-xl border border-neutral-800 p-4">
+            <div className="text-sm text-neutral-400">Recipients</div>
+            <div className="text-2xl font-semibold">{batch.recipient_count ?? 0}</div>
+          </div>
+          <div className="rounded-xl border border-neutral-800 p-4">
+            <div className="text-sm text-neutral-400">Created</div>
+            <div className="text-base font-medium">
+              {batch.created_at ? new Date(batch.created_at).toLocaleString("en-GB") : "—"}
             </div>
-            <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/30 p-5 sm:p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
-              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">Joined</div>
-              <div className="text-2xl sm:text-3xl font-semibold tabular-nums text-white tracking-tight">
-                {batch.recipient_count ?? 0}
-              </div>
-              <p className="text-xs text-neutral-500 mt-2 leading-relaxed">Recipients who have claimed a slot or joined.</p>
-            </div>
-            <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/30 p-5 sm:p-6 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
-              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">Created</div>
-              <div className="text-base font-medium text-neutral-100">
-                {batch.created_at ? new Date(batch.created_at).toLocaleString("en-GB") : "—"}
-              </div>
-              <p className="text-xs text-neutral-500 mt-2 leading-relaxed">Batch opened on this date.</p>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="rounded-xl border border-neutral-800 p-4">
-              <div className="text-sm text-neutral-400">Total</div>
-              <div className="text-2xl font-semibold">{moneyGBP(batch.total_amount)}</div>
-            </div>
-            <div className="rounded-xl border border-neutral-800 p-4">
-              <div className="text-sm text-neutral-400">Recipients</div>
-              <div className="text-2xl font-semibold">{batch.recipient_count ?? 0}</div>
-            </div>
-            <div className="rounded-xl border border-neutral-800 p-4">
-              <div className="text-sm text-neutral-400">Created</div>
-              <div className="text-base font-medium">
-                {batch.created_at ? new Date(batch.created_at).toLocaleString("en-GB") : "—"}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      ) : null}
 
-      {/* Claimable batch dashboard */}
+      {isClaimable ? (
+        <FintechCard elevated interactive={false} className="mt-6 p-5 sm:p-6">
+          <p className="text-xs font-medium text-[#6B7280]">Payout pool</p>
+          <p className="mt-2 text-3xl font-bold tabular-nums tracking-tight text-[#F9FAFB] sm:text-4xl">
+            {moneyGBP(batch.total_amount)}
+          </p>
+          <p className="mt-2 text-xs text-[#6B7280]">Total in this Claim Link pool</p>
+          <div className="mt-6 space-y-4 border-t border-white/[0.05] pt-6 text-sm">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="text-[#6B7280]">Joined</span>
+              <span className="font-semibold tabular-nums text-[#F9FAFB]">
+                {hasSlots
+                  ? `${claimSlots.filter((s) => s.status === "claimed").length} of ${claimSlots.length} slots`
+                  : `${batch.recipient_count ?? 0}${batch.max_claims != null ? ` · max ${batch.max_claims}` : ""}`}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <span className="text-[#6B7280]">Expires</span>
+              <span className="max-w-[min(100%,18rem)] text-right">
+                <span className="font-medium text-[#F9FAFB]">{formatExpiryDateTime(batch.expires_at)}</span>
+                {batch.expires_at ? (
+                  <span className="mt-1 block text-xs font-normal text-[#6B7280]">
+                    {formatExpiryTimeLeft(batch.expires_at)}
+                  </span>
+                ) : null}
+              </span>
+            </div>
+          </div>
+        </FintechCard>
+      ) : null}
+
+      {/* Claimable: access + campaign (split cards) */}
       {isClaimable && batch.batch_code && (
-        <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/35 p-5 sm:p-7 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <h2 className="text-base font-semibold text-white tracking-tight">{payoutKindLabel}</h2>
-            {allocationsLocked && (
-              <span className={clsx(
-                "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border",
-                "border-emerald-700 text-emerald-200 bg-emerald-900/20"
-              )}>
-                Payouts locked
-              </span>
-            )}
+        <>
+          <FintechCard interactive={false} className="mt-5 p-5 sm:p-6">
+            <h2 className="text-base font-semibold tracking-tight text-[#F9FAFB]">Claim access</h2>
+            <p className="mt-1 text-xs text-[#6B7280]">{payoutKindLabel}</p>
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {allocationsLocked && (
+                <span className="inline-flex items-center rounded-full bg-[#22C55E]/12 px-2.5 py-0.5 text-xs font-medium text-[#86EFAC]">
+                  Payouts locked
+                </span>
+              )}
+              {claimableFull && (
+                <span className="inline-flex items-center rounded-full bg-[#F59E0B]/12 px-2.5 py-0.5 text-xs font-medium text-[#FCD34D]">
+                  Full
+                </span>
+              )}
+            </div>
             {claimableFull && (
-              <span className={clsx(
-                "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium border",
-                "border-amber-700 text-amber-200 bg-amber-900/20"
-              )}>
-                Full
-              </span>
+              <p className="mt-4 text-sm text-[#FCD34D]/90">This batch is no longer accepting claims.</p>
             )}
-          </div>
-          {claimableFull && (
-            <p className="text-sm text-amber-200/90 mb-4 rounded-lg border border-amber-800/50 bg-amber-950/20 px-3 py-2">
-              This batch is no longer accepting claims.
-            </p>
-          )}
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <ClaimableBatchShare
-              storedBatchCode={batch.batch_code}
-              publicSiteUrl={getPublicSiteUrl()}
-            />
-            {claimableFundStatusMessage && (
-              <p className="text-sm text-emerald-200/90 max-w-md rounded-lg border border-emerald-800/40 bg-emerald-950/20 px-3 py-2">
-                {claimableFundStatusMessage}
-              </p>
-            )}
-            {showFundBatchFromWalletButton && (
-              <FundBatchFromWalletButton
-                orgId={batch.org_id}
-                batchId={batch.id}
-                poolTotalGbp={Number(batch.total_amount ?? 0)}
-                fundEnabled={canFundBatchFromWallet}
-                fundBlockedReason={fundBatchBlockedReason}
-              />
-            )}
-          </div>
+            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+              {showFundBatchFromWalletButton && (
+                <FundBatchFromWalletButton
+                  orgId={batch.org_id}
+                  batchId={batch.id}
+                  poolTotalGbp={Number(batch.total_amount ?? 0)}
+                  fundEnabled={canFundBatchFromWallet}
+                  fundBlockedReason={fundBatchBlockedReason}
+                />
+              )}
+              {claimableFundStatusMessage && (
+                <p className="text-sm leading-relaxed text-[#86EFAC]/90 sm:max-w-md">{claimableFundStatusMessage}</p>
+              )}
+            </div>
+            <div className="mt-8 border-t border-white/[0.05] pt-8">
+              <ClaimableBatchShare embedded storedBatchCode={batch.batch_code} publicSiteUrl={getPublicSiteUrl()} />
+            </div>
+          </FintechCard>
+
+          <FintechCard interactive={false} className="mt-5 p-5 sm:p-6">
           {claimablePayoutStats && (batch.status === "completed" || batch.status === "completed_with_errors") && (
-            <div className={clsx(
-              "mb-6 rounded-xl border p-5",
-              batch.status === "completed"
-                ? "border-emerald-800/45 bg-emerald-950/25"
-                : "border-amber-800/45 bg-amber-950/20"
-            )}>
-              <h3 className="text-sm font-semibold text-white mb-1">Wallet credit results</h3>
-              <p className="text-xs text-neutral-500 mb-4 leading-relaxed">
-                Recipients who completed the claim flow and amounts credited (or attempted).
-              </p>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="rounded-lg border border-emerald-800/30 bg-neutral-950/30 px-3 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-200/70">Credited</p>
-                  <p className="mt-1 text-xl font-semibold tabular-nums text-emerald-100">{claimablePayoutStats.paidCount}</p>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">recipients</p>
+            <div className="mb-8 space-y-4 border-b border-white/[0.05] pb-8">
+              <div>
+                <h3 className="text-sm font-semibold text-[#F9FAFB]">Wallet credit results</h3>
+                <p className="mt-1 text-xs leading-relaxed text-[#6B7280]">
+                  Recipients who completed the claim flow and amounts credited (or attempted).
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+                <div>
+                  <p className="text-xs text-[#6B7280]">Credited (recipients)</p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-[#86EFAC]">{claimablePayoutStats.paidCount}</p>
                 </div>
-                <div className="rounded-lg border border-emerald-800/30 bg-neutral-950/30 px-3 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-200/70">Credited</p>
-                  <p className="mt-1 text-xl font-semibold tabular-nums text-emerald-100">
+                <div>
+                  <p className="text-xs text-[#6B7280]">Credited (total)</p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-[#86EFAC]">
                     {moneyGBP(claimablePayoutStats.paidAmount)}
                   </p>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">total</p>
                 </div>
-                <div className="rounded-lg border border-amber-800/35 bg-neutral-950/30 px-3 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-200/80">Did not complete</p>
-                  <p className="mt-1 text-xl font-semibold tabular-nums text-amber-100">{claimablePayoutStats.failedCount}</p>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">recipients</p>
+                <div>
+                  <p className="text-xs text-[#6B7280]">Did not complete</p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-[#FCD34D]">{claimablePayoutStats.failedCount}</p>
                 </div>
-                <div className="rounded-lg border border-amber-800/35 bg-neutral-950/30 px-3 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-200/80">At risk</p>
-                  <p className="mt-1 text-xl font-semibold tabular-nums text-amber-100">
+                <div>
+                  <p className="text-xs text-[#6B7280]">At risk (amount)</p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-[#FCD34D]">
                     {moneyGBP(claimablePayoutStats.failedAmount)}
                   </p>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">amount</p>
                 </div>
               </div>
               {claimablePayoutStats.failedCount === 0 && (
-                <p className="mt-3 text-xs text-neutral-500">No failed wallet credits for this batch.</p>
+                <p className="text-xs text-[#6B7280]">No failed wallet credits for this batch.</p>
               )}
             </div>
           )}
-          <div className="mb-2">
-            <h3 className="text-sm font-semibold text-neutral-200">Campaign details</h3>
-            <p className="text-xs text-neutral-500 mt-1">Pool, limits, and timing for this Claim Link.</p>
+          <div className="mb-6">
+            <h3 className="text-base font-semibold tracking-tight text-[#F9FAFB]">Campaign details</h3>
+            <p className="mt-1 text-xs text-[#6B7280]">Pool, limits, timing, and allocation.</p>
           </div>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 text-sm">
-            <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
-              <dt className="text-xs text-neutral-500">Pool total</dt>
-              <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">{moneyGBP(batch.total_amount)}</dd>
+          <dl className="divide-y divide-white/[0.05] text-sm">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 py-3 first:pt-0">
+              <dt className="text-xs font-medium text-[#6B7280]">Pool total</dt>
+              <dd className="font-semibold tabular-nums text-[#F9FAFB]">{moneyGBP(batch.total_amount)}</dd>
             </div>
-            <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
-              <dt className="text-xs text-neutral-500">Joined recipients</dt>
-              <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">{batch.recipient_count ?? 0}</dd>
+            <div className="flex flex-wrap items-baseline justify-between gap-2 py-3">
+              <dt className="text-xs font-medium text-[#6B7280]">Joined recipients</dt>
+              <dd className="font-semibold tabular-nums text-[#F9FAFB]">{batch.recipient_count ?? 0}</dd>
             </div>
-            <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
-              <dt className="text-xs text-neutral-500">Recipient cap</dt>
-              <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">{batch.max_claims ?? "—"}</dd>
+            <div className="flex flex-wrap items-baseline justify-between gap-2 py-3">
+              <dt className="text-xs font-medium text-[#6B7280]">Recipient cap</dt>
+              <dd className="font-semibold tabular-nums text-[#F9FAFB]">{batch.max_claims ?? "—"}</dd>
             </div>
             {(() => {
               const amounts = claimableClaims.map((c) => c.claim_amount);
@@ -868,13 +873,13 @@ export default async function BatchDetailsPage({
               if (hasClaims && !allEqual) {
                 return (
                   <>
-                    <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
-                      <dt className="text-xs text-neutral-500">Allocation</dt>
-                      <dd className="font-semibold text-neutral-100 mt-0.5">Custom per recipient</dd>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2 py-3">
+                      <dt className="text-xs font-medium text-[#6B7280]">Allocation</dt>
+                      <dd className="font-semibold text-[#F9FAFB]">Custom per recipient</dd>
                     </div>
-                    <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
-                      <dt className="text-xs text-neutral-500">Per-recipient range</dt>
-                      <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2 py-3">
+                      <dt className="text-xs font-medium text-[#6B7280]">Per-recipient range</dt>
+                      <dd className="font-semibold tabular-nums text-[#F9FAFB]">
                         {moneyGBP(minAmount)} – {moneyGBP(maxAmount)}
                       </dd>
                     </div>
@@ -884,60 +889,62 @@ export default async function BatchDetailsPage({
               const displayAmount = hasClaims && allEqual ? amounts[0] : batch.amount_per_claim;
               if (displayAmount != null && Number(displayAmount) > 0) {
                 return (
-                  <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
-                    <dt className="text-xs text-neutral-500">Default per recipient</dt>
-                    <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">{moneyGBP(displayAmount)}</dd>
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 py-3">
+                    <dt className="text-xs font-medium text-[#6B7280]">Default per recipient</dt>
+                    <dd className="font-semibold tabular-nums text-[#F9FAFB]">{moneyGBP(displayAmount)}</dd>
                   </div>
                 );
               }
               return null;
             })()}
-            <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3 sm:col-span-2 lg:col-span-1">
-              <dt className="text-xs text-neutral-500">Link expires</dt>
-              <dd className="font-medium text-neutral-100 mt-0.5">{formatExpiryDateTime(batch.expires_at)}</dd>
-              {batch.expires_at && (
-                <>
-                  <dd className="text-xs text-neutral-500 mt-1">Your local time</dd>
-                  <dd className="text-xs text-neutral-400 mt-0.5">{formatExpiryTimeLeft(batch.expires_at)}</dd>
-                </>
-              )}
+            <div className="flex flex-wrap items-start justify-between gap-2 py-3">
+              <dt className="text-xs font-medium text-[#6B7280]">Link expires</dt>
+              <dd className="max-w-[min(100%,16rem)] text-right">
+                <span className="font-medium text-[#F9FAFB]">{formatExpiryDateTime(batch.expires_at)}</span>
+                {batch.expires_at ? (
+                  <>
+                    <span className="mt-1 block text-xs text-[#6B7280]">Your local time</span>
+                    <span className="mt-0.5 block text-xs text-[#9CA3AF]">{formatExpiryTimeLeft(batch.expires_at)}</span>
+                  </>
+                ) : null}
+              </dd>
             </div>
-            <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
-              <dt className="text-xs text-neutral-500">Allocated so far</dt>
-              <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 py-3">
+              <dt className="text-xs font-medium text-[#6B7280]">Allocated so far</dt>
+              <dd className="font-semibold tabular-nums text-[#F9FAFB]">
                 {hasSlots ? moneyGBP(totalClaimedFromSlots) : moneyGBP(totalClaimedFromClaims)}
               </dd>
             </div>
-            <div className="rounded-lg border border-neutral-800/60 bg-neutral-950/25 px-3 py-3">
-              <dt className="text-xs text-neutral-500">Unallocated pool</dt>
-              <dd className="font-semibold tabular-nums text-neutral-100 mt-0.5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 py-3">
+              <dt className="text-xs font-medium text-[#6B7280]">Unallocated pool</dt>
+              <dd className="font-semibold tabular-nums text-[#F9FAFB]">
                 {moneyGBP(Math.max(0, Number(batch.total_amount ?? 0) - (hasSlots ? totalClaimedFromSlots : totalClaimedFromClaims)))}
               </dd>
             </div>
           </dl>
           {hasSlots && claimSlots.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-neutral-800/80">
-              <h3 className="text-sm font-semibold text-white mb-1">Slots</h3>
-              <p className="text-xs text-neutral-500 mb-4">Fixed places in this batch and who claimed each one.</p>
-              <div className="overflow-x-auto rounded-xl border border-neutral-800/70">
+            <div className="mt-8 border-t border-white/[0.05] pt-8">
+              <h3 className="text-sm font-semibold text-[#F9FAFB]">Slots</h3>
+              <p className="mt-1 text-xs text-[#6B7280]">Fixed places in this batch and who claimed each one.</p>
+              <div className="mt-4 overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
-                    <tr className="border-b border-neutral-800 bg-neutral-900/80">
-                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                    <tr className="border-b border-white/[0.06]">
+                      <th className="px-3 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-[#6B7280]">
                         #
                       </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                      <th className="px-3 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-[#6B7280]">
                         Amount
                       </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                      <th className="px-3 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-[#6B7280]">
                         Status
                       </th>
-                      <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                      <th className="px-3 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-[#6B7280]">
                         Recipient
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-800/80">
+                  <tbody className="divide-y divide-white/[0.04]">
                     {claimSlots.map((slot) => {
                       const claimedBy =
                         slot.status === "claimed" && slot.claimed_by_user_id
@@ -956,27 +963,27 @@ export default async function BatchDetailsPage({
                             })()
                           : null;
                       return (
-                        <tr key={slot.id} className="bg-neutral-950/20">
-                          <td className="py-3.5 px-4 text-neutral-400 tabular-nums">{slot.slot_index + 1}</td>
-                          <td className="py-3.5 px-4 font-medium tabular-nums text-neutral-100">{moneyGBP(slot.amount)}</td>
-                          <td className="py-3.5 px-4">
+                        <tr key={slot.id} className="transition-colors hover:bg-white/[0.02]">
+                          <td className="px-3 py-3 text-[#6B7280] tabular-nums">{slot.slot_index + 1}</td>
+                          <td className="px-3 py-3 font-medium tabular-nums text-[#F9FAFB]">{moneyGBP(slot.amount)}</td>
+                          <td className="px-3 py-3">
                             <span
                               className={clsx(
-                                "inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                                "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
                                 slot.status === "claimed"
-                                  ? "border-amber-800/50 text-amber-200 bg-amber-950/30"
-                                  : "border-emerald-800/45 text-emerald-200 bg-emerald-950/25"
+                                  ? "bg-[#F59E0B]/12 text-[#FCD34D]"
+                                  : "bg-[#22C55E]/12 text-[#86EFAC]"
                               )}
                             >
                               {slot.status === "claimed" ? "Claimed" : "Open"}
                             </span>
                           </td>
-                          <td className="py-3.5 px-4 text-neutral-200 text-sm">
+                          <td className="px-3 py-3 text-sm text-[#E5E7EB]">
                             {claimedBy ? (
                               <div>
                                 <div>{claimedBy.primary}</div>
                                 {claimedBy.subtext ? (
-                                  <div className="text-xs text-neutral-500 mt-0.5">{claimedBy.subtext}</div>
+                                  <div className="mt-0.5 text-xs text-[#6B7280]">{claimedBy.subtext}</div>
                                 ) : null}
                               </div>
                             ) : (
@@ -992,16 +999,16 @@ export default async function BatchDetailsPage({
             </div>
           )}
           {(hasSlots ? claimSlots.length > 0 : typeof batch.max_claims === "number" && batch.max_claims > 0) && (
-            <div className="mt-8 pt-6 border-t border-neutral-800/80">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between mb-3">
-                <span className="text-sm font-semibold text-white">Fill rate</span>
-                <span className="text-sm tabular-nums text-neutral-400">
+            <div className="mt-8 border-t border-white/[0.05] pt-8">
+              <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                <span className="text-sm font-semibold text-[#F9FAFB]">Fill rate</span>
+                <span className="text-sm tabular-nums text-[#9CA3AF]">
                   {hasSlots
                     ? `${claimSlots.filter((s) => s.status === "claimed").length} of ${claimSlots.length} slots claimed`
                     : `${batch.recipient_count ?? 0} of ${batch.max_claims} recipients joined`}
                 </span>
               </div>
-              <div className="h-2.5 rounded-full bg-neutral-800/90 overflow-hidden ring-1 ring-white/5">
+              <div className="h-2 overflow-hidden rounded-full bg-[#0B0F14]">
                 <div
                   className={clsx(
                     "h-full rounded-full transition-all duration-500 ease-out",
@@ -1015,15 +1022,15 @@ export default async function BatchDetailsPage({
                 />
               </div>
               {claimableFull && (
-                <p className="mt-2 text-xs text-amber-200/80">This batch has reached its limit or expiry.</p>
+                <p className="mt-2 text-xs text-[#9CA3AF]">This batch has reached its limit or expiry.</p>
               )}
             </div>
           )}
-          <div className="mt-8 pt-6 border-t border-neutral-800/80">
-            <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <div className="mt-8 border-t border-white/[0.05] pt-8">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-white">Per-recipient amounts</h3>
-                <p className="text-xs text-neutral-500 mt-1 max-w-md leading-relaxed">
+                <h3 className="text-sm font-semibold text-[#F9FAFB]">Per-recipient amounts</h3>
+                <p className="mt-1 max-w-md text-xs leading-relaxed text-[#6B7280]">
                   Adjust allocations before locking. Totals must match the pool.
                 </p>
               </div>
@@ -1049,30 +1056,30 @@ export default async function BatchDetailsPage({
                 c.recipient_lifecycle_status === "claimable" &&
                 String(c.claim_token ?? "").trim() !== ""
             ) && (
-            <div className="mt-8 pt-6 border-t border-neutral-800/80">
-              <h3 className="text-sm font-semibold text-white mb-1">Private claim links</h3>
-              <p className="text-xs text-neutral-500 mb-4 max-w-2xl leading-relaxed">
+            <div className="mt-8 border-t border-white/[0.05] pt-8">
+              <h3 className="text-sm font-semibold text-[#F9FAFB]">Private claim links</h3>
+              <p className="mb-4 mt-1 max-w-2xl text-xs leading-relaxed text-[#6B7280]">
                 Send each link only to the matching person. They must use the same sign-in they used to join. Funds go to
                 their PolyPayd wallet (bank withdrawal is separate). Recipients who already joined before you sent the
                 payout were credited automatically and do not need a link.
               </p>
-              <div className="overflow-x-auto rounded-xl border border-neutral-800/70 text-sm">
+              <div className="overflow-x-auto text-sm">
                 <table className="min-w-full">
                   <thead>
-                    <tr className="border-b border-neutral-800 bg-neutral-900/80 text-left">
-                      <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                    <tr className="border-b border-white/[0.06] text-left">
+                      <th className="px-3 py-2.5 text-xs font-medium uppercase tracking-wide text-[#6B7280]">
                         Recipient
                       </th>
-                      <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                      <th className="px-3 py-2.5 text-xs font-medium uppercase tracking-wide text-[#6B7280]">
                         Amount
                       </th>
-                      <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                      <th className="px-3 py-2.5 text-xs font-medium uppercase tracking-wide text-[#6B7280]">
                         Wallet
                       </th>
-                      <th className="py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500">Link</th>
+                      <th className="px-3 py-2.5 text-xs font-medium uppercase tracking-wide text-[#6B7280]">Link</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-neutral-800/80">
+                  <tbody className="divide-y divide-white/[0.04]">
                     {claimableClaims
                       .filter(
                         (c) =>
@@ -1080,25 +1087,25 @@ export default async function BatchDetailsPage({
                           String(c.claim_token ?? "").trim() !== ""
                       )
                       .map((c) => (
-                      <tr key={c.id} className="bg-neutral-950/20">
-                        <td className="py-3.5 px-4 align-top min-w-[140px]">
-                          <div className="text-neutral-100 text-sm font-medium">{c.display_primary}</div>
+                      <tr key={c.id} className="transition-colors hover:bg-white/[0.02]">
+                        <td className="min-w-[140px] px-3 py-3 align-top">
+                          <div className="text-sm font-medium text-[#F9FAFB]">{c.display_primary}</div>
                           {c.display_subtext ? (
-                            <div className="text-xs text-neutral-500 mt-1">{c.display_subtext}</div>
+                            <div className="mt-1 text-xs text-[#6B7280]">{c.display_subtext}</div>
                           ) : null}
                         </td>
-                        <td className="py-3.5 px-4 align-top font-medium tabular-nums text-neutral-100 whitespace-nowrap">
+                        <td className="whitespace-nowrap px-3 py-3 align-top font-medium tabular-nums text-[#F9FAFB]">
                           {moneyGBP(c.claim_amount)}
                         </td>
-                        <td className="py-3.5 px-4 align-top">
+                        <td className="px-3 py-3 align-top">
                           <span className={recipientLifecyclePill(c.recipient_lifecycle_status)}>
                             {formatRecipientLifecycleLabel(c.recipient_lifecycle_status)}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 align-top whitespace-nowrap">
+                        <td className="whitespace-nowrap px-3 py-3 align-top">
                           <Link
                             href={`/app/claim-payout/${c.claim_token}`}
-                            className="text-sm font-medium text-sky-400 hover:text-sky-300 transition-colors"
+                            className="text-sm font-medium text-[#3B82F6] transition-colors hover:text-[#60A5FA]"
                           >
                             Open claim page
                           </Link>
@@ -1111,9 +1118,10 @@ export default async function BatchDetailsPage({
             </div>
           )}
           {!claimableSchemaReady && (
-            <p className="mt-4 text-xs text-amber-600/90">Admin: {CLAIMABLE_SCHEMA_MESSAGE}</p>
+            <p className="mt-6 text-xs text-[#F59E0B]/90">Admin: {CLAIMABLE_SCHEMA_MESSAGE}</p>
           )}
-        </div>
+          </FintechCard>
+        </>
       )}
 
       {/* Summary cards (standard batches only) */}
@@ -1197,39 +1205,31 @@ export default async function BatchDetailsPage({
       )}
 
       {/* Timeline */}
-      <div className="rounded-xl border border-neutral-800 p-5">
-        <div className="text-sm text-neutral-400 mb-4">{payoutKindLabel} Timeline</div>
+      <FintechCard interactive={false} className="p-5 sm:p-6">
+        <div className="mb-5 text-sm font-medium text-[#6B7280]">{payoutKindLabel} timeline</div>
 
         <div className="flex items-center justify-between">
           {(isClaimable ? claimableTimeline : timeline).map((step, i) => (
-            <div key={i} className="flex flex-col items-center flex-1 relative">
+            <div key={i} className="relative flex flex-1 flex-col items-center">
               <div
-                className="w-3 h-3 rounded-full"
-                style={{
-                  background: step.status === "done" ? "#34d399" : "rgb(64,64,64)",
-                }}
+                className={`h-2.5 w-2.5 rounded-full ${step.status === "done" ? "bg-[#22C55E]" : "bg-[#374151]"}`}
               />
 
-              <div className="text-xs text-neutral-400 mt-2 text-center">
-                {step.label}
-              </div>
+              <div className="mt-2 text-center text-[11px] text-[#9CA3AF]">{step.label}</div>
 
               {step.time && (
-                <div className="text-[10px] text-neutral-500 mt-1">
+                <div className="mt-1 text-center text-[10px] text-[#6B7280]">
                   {new Date(step.time).toLocaleString("en-GB")}
                 </div>
               )}
 
               {i < (isClaimable ? claimableTimeline : timeline).length - 1 && (
-                <div
-                  className="absolute top-1.5 left-1/2 w-full h-px"
-                  style={{ background: "rgb(64,64,64)" }}
-                />
+                <div className="absolute left-1/2 top-[5px] h-px w-full bg-white/[0.08]" />
               )}
             </div>
           ))}
         </div>
-      </div>
+      </FintechCard>
 
       {/* Run Summary (standard batches only, when there are failed payouts) */}
       {!isClaimable && batch.status === "completed_with_errors" && (
@@ -1558,10 +1558,10 @@ export default async function BatchDetailsPage({
 
       {/* ACTIVITY TAB */}
       {(tab === "activity" || isClaimable) && (
-        <div className="rounded-2xl border border-neutral-800/90 bg-neutral-900/20 overflow-hidden shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]">
-          <div className="p-5 sm:p-6 border-b border-neutral-800/80">
-            <h2 className="text-lg font-semibold text-white tracking-tight">Activity</h2>
-            <p className="text-sm text-neutral-500 mt-1 leading-relaxed">
+        <FintechCard interactive={false} className="overflow-hidden p-0">
+          <div className="border-b border-white/[0.05] px-5 py-5 sm:px-6">
+            <h2 className="text-base font-semibold tracking-tight text-[#F9FAFB]">Activity</h2>
+            <p className="mt-1 text-sm leading-relaxed text-[#6B7280]">
               Latest updates for this batch (up to 100). Technical payloads stay under each row.
             </p>
           </div>
@@ -1569,36 +1569,36 @@ export default async function BatchDetailsPage({
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b border-neutral-800 bg-neutral-900/70">
-                  <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500 w-44">
+                <tr className="border-b border-white/[0.06]">
+                  <th className="w-44 px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-[#6B7280]">
                     When
                   </th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500 min-w-[200px]">
+                  <th className="min-w-[200px] px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-[#6B7280]">
                     What happened
                   </th>
-                  <th className="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wider text-neutral-500 w-48">
+                  <th className="w-48 px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-[#6B7280]">
                     Who
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-800/80">
+              <tbody className="divide-y divide-white/[0.04]">
                 {auditEvents.map((e) => {
                   const summary = formatAuditEventSummary(e.event_type, e.event_data);
                   const actorLabel = resolveAuditActorLabel(e.actor_user_id, userId, auditActorProfiles);
                   const payloadKeys = Object.keys(e.event_data ?? {});
                   const rawPayload = formatAuditEventDataRaw(e.event_data);
                   return (
-                    <tr key={e.id} className="bg-neutral-950/15 align-top">
-                      <td className="py-4 px-4 text-neutral-400 whitespace-nowrap">
+                    <tr key={e.id} className="align-top transition-colors hover:bg-white/[0.02]">
+                      <td className="whitespace-nowrap px-4 py-4 text-[#6B7280]">
                         {e.created_at ? (
                           <>
-                            <div className="text-neutral-200 text-sm">
+                            <div className="text-sm text-[#F9FAFB]">
                               {new Date(e.created_at).toLocaleDateString("en-GB", {
                                 day: "numeric",
                                 month: "short",
                               })}
                             </div>
-                            <div className="text-xs text-neutral-500 mt-0.5">
+                            <div className="mt-0.5 text-xs text-[#6B7280]">
                               {new Date(e.created_at).toLocaleTimeString("en-GB", {
                                 hour: "2-digit",
                                 minute: "2-digit",
@@ -1609,37 +1609,37 @@ export default async function BatchDetailsPage({
                           "—"
                         )}
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="font-semibold text-neutral-100 leading-snug">
+                      <td className="px-4 py-4">
+                        <div className="font-semibold leading-snug text-[#F9FAFB]">
                           {formatAuditEventTitle(e.event_type)}
                         </div>
                         {summary ? (
-                          <p className="text-sm text-neutral-400 mt-1.5 leading-relaxed max-w-xl">{summary}</p>
+                          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-[#9CA3AF]">{summary}</p>
                         ) : null}
                         {payloadKeys.length > 0 && (
-                          <details className="mt-3 group">
-                            <summary className="cursor-pointer text-xs text-neutral-600 hover:text-neutral-400 select-none list-none flex items-center gap-1.5">
-                              <span className="text-neutral-500 group-open:rotate-90 transition-transform inline-block">
+                          <details className="group mt-3">
+                            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs text-[#6B7280] select-none hover:text-[#9CA3AF]">
+                              <span className="inline-block text-[#6B7280] transition-transform group-open:rotate-90">
                                 ▸
                               </span>
                               Technical details
                             </summary>
-                            <pre className="mt-2 p-3 rounded-lg border border-neutral-800/80 bg-neutral-950/60 text-[11px] text-neutral-500 overflow-x-auto font-mono leading-relaxed max-w-2xl">
+                            <pre className="mt-2 max-w-2xl overflow-x-auto rounded-lg bg-[#0B0F14]/80 p-3 font-mono text-[11px] leading-relaxed text-[#6B7280]">
                               {rawPayload}
                             </pre>
                           </details>
                         )}
                       </td>
-                      <td className="py-4 px-4 text-neutral-300 text-sm leading-snug">{actorLabel}</td>
+                      <td className="px-4 py-4 text-sm leading-snug text-[#9CA3AF]">{actorLabel}</td>
                     </tr>
                   );
                 })}
 
                 {!auditEvents.length && (
                   <tr>
-                    <td className="py-12 px-4 text-center text-neutral-500" colSpan={3}>
-                      <p className="text-sm font-medium text-neutral-400">No activity yet</p>
-                      <p className="text-sm text-neutral-600 mt-2 max-w-sm mx-auto leading-relaxed">
+                    <td className="px-4 py-12 text-center text-[#6B7280]" colSpan={3}>
+                      <p className="text-sm font-medium text-[#9CA3AF]">No activity yet</p>
+                      <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-[#6B7280]">
                         Actions such as funding, claims, and approvals will appear here.
                       </p>
                     </td>
@@ -1648,7 +1648,7 @@ export default async function BatchDetailsPage({
               </tbody>
             </table>
           </div>
-        </div>
+        </FintechCard>
       )}
     </div>
   );

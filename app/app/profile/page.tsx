@@ -1,7 +1,9 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { FintechCard } from "@/components/fintech";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +12,16 @@ function moneyGBP(n: unknown) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(num);
 }
 
-function cardClassName() {
-  return "rounded-xl border border-neutral-800 bg-neutral-900/50 p-5";
+const label = "text-xs font-medium text-[#6B7280]";
+const value = "text-sm font-medium text-[#F9FAFB]";
+
+function Detail({ k, v }: { k: string; v: ReactNode }) {
+  return (
+    <div>
+      <div className={label}>{k}</div>
+      <div className={`mt-1 ${value}`}>{v}</div>
+    </div>
+  );
 }
 
 export default async function ProfilePage() {
@@ -50,98 +60,81 @@ export default async function ProfilePage() {
       .reverse()[0] ?? null;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-white">Profile</h1>
-      </div>
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-5 sm:py-10">
+      <h1 className="text-xl font-semibold tracking-tight text-[#F9FAFB] sm:text-2xl">Profile</h1>
+      <p className="mt-1 text-sm text-[#6B7280]">Your account and wallet overview.</p>
 
-      <section className={cardClassName()}>
-        <h2 className="text-sm font-medium text-neutral-400">Identity</h2>
-        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+      {/* Hero: wallet */}
+      <FintechCard elevated interactive={false} className="mt-8 p-5 sm:p-6">
+        <p className="text-xs font-medium text-[#6B7280]">Available balance</p>
+        <p className="mt-2 text-[2rem] font-bold tabular-nums tracking-tight text-[#F9FAFB] sm:text-[2.25rem]">
+          {moneyGBP(wallet?.current_balance ?? 0)}
+        </p>
+        <div className="mt-6 flex flex-wrap gap-x-10 gap-y-4 border-t border-white/[0.05] pt-6">
           <div>
-            <div className="text-xs text-neutral-500">Full name</div>
-            <div className="text-sm text-neutral-100">{user?.fullName || "Not set"}</div>
+            <p className={label}>Pending</p>
+            <p className="mt-1 text-base font-semibold tabular-nums text-[#9CA3AF]">{moneyGBP(wallet?.pending_balance ?? 0)}</p>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Email</div>
-            <div className="text-sm text-neutral-100">{user?.primaryEmailAddress?.emailAddress || "Not set"}</div>
+            <p className={label}>Total sent</p>
+            <p className="mt-1 text-base font-semibold tabular-nums text-[#F9FAFB]">{moneyGBP(totalSent)}</p>
+            <p className="mt-0.5 text-xs text-[#6B7280]">From completed payouts you funded</p>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Account type</div>
-            <div className="text-sm capitalize text-neutral-100">{accountType}</div>
+            <p className={label}>Currency</p>
+            <p className="mt-1 text-base font-semibold text-[#F9FAFB]">{wallet?.currency ?? "GBP"}</p>
           </div>
         </div>
-      </section>
+      </FintechCard>
 
-      <section className={cardClassName()}>
-        <h2 className="text-sm font-medium text-neutral-400">Wallet Snapshot</h2>
-        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
-          <div>
-            <div className="text-xs text-neutral-500">Available</div>
-            <div className="text-lg font-semibold text-white">{moneyGBP(wallet?.current_balance ?? 0)}</div>
-            <div className="text-xs text-neutral-500 mt-2">Pending</div>
-            <div className="text-sm font-semibold text-neutral-200">{moneyGBP(wallet?.pending_balance ?? 0)}</div>
-          </div>
-          <div>
-            <div className="text-xs text-neutral-500">Total sent</div>
-            <div className="text-lg font-semibold text-white">{moneyGBP(totalSent)}</div>
-          </div>
-          <div>
-            <div className="text-xs text-neutral-500">Currency</div>
-            <div className="text-sm text-neutral-100">{wallet?.currency ?? "GBP"}</div>
-          </div>
+      <FintechCard interactive={false} className="mt-5 p-4 sm:p-5">
+        <h2 className="text-sm font-semibold text-[#F9FAFB]">Identity</h2>
+        <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
+          <Detail k="Full name" v={user?.fullName || "Not set"} />
+          <Detail k="Email" v={user?.primaryEmailAddress?.emailAddress || "Not set"} />
+          <Detail k="Account type" v={<span className="capitalize">{accountType}</span>} />
         </div>
-      </section>
+      </FintechCard>
 
       {accountType === "business" && (
-        <section className={cardClassName()}>
-          <h2 className="text-sm font-medium text-neutral-400">Business Details</h2>
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div>
-              <div className="text-xs text-neutral-500">Business name</div>
-              <div className="text-sm text-neutral-100">{businessName || "Not set"}</div>
-            </div>
-            <div>
-              <div className="text-xs text-neutral-500">Registration ID</div>
-              <div className="text-sm text-neutral-100">{businessId || "Not set"}</div>
-            </div>
+        <FintechCard interactive={false} className="mt-5 p-4 sm:p-5">
+          <h2 className="text-sm font-semibold text-[#F9FAFB]">Business</h2>
+          <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <Detail k="Business name" v={businessName || "Not set"} />
+            <Detail k="Registration ID" v={businessId || "Not set"} />
           </div>
-        </section>
+        </FintechCard>
       )}
 
-      <section className={cardClassName()}>
-        <h2 className="text-sm font-medium text-neutral-400">Security</h2>
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <p className="text-sm text-neutral-300">Change password from your account security settings.</p>
-          <Link
-            href="/user"
-            className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-100 hover:border-neutral-600"
-          >
-            Change password
-          </Link>
-        </div>
-      </section>
+      <div className="mt-5 flex flex-col gap-3 rounded-2xl border border-white/[0.05] bg-[#121821] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <p className="text-sm text-[#9CA3AF]">Change password in your account security settings.</p>
+        <Link
+          href="/user"
+          className="inline-flex min-h-10 shrink-0 items-center justify-center self-end rounded-xl border border-white/[0.08] bg-[#161F2B] px-4 text-sm font-semibold text-[#F9FAFB] transition-colors hover:border-white/[0.12] hover:bg-[#1a2433] sm:self-auto"
+        >
+          Change password
+        </Link>
+      </div>
 
-      <section className={cardClassName()}>
-        <h2 className="text-sm font-medium text-neutral-400">Activity Summary</h2>
-        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+      <FintechCard interactive={false} className="mt-5 p-4 sm:p-5">
+        <h2 className="text-sm font-semibold text-[#F9FAFB]">Activity summary</h2>
+        <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-4">
           <div>
-            <div className="text-xs text-neutral-500">Total payouts</div>
-            <div className="text-lg font-semibold text-white">{totalPayouts}</div>
+            <p className={label}>Total payouts</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-[#F9FAFB]">{totalPayouts}</p>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Total recipients</div>
-            <div className="text-lg font-semibold text-white">{totalRecipients}</div>
+            <p className={label}>Total recipients</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-[#F9FAFB]">{totalRecipients}</p>
           </div>
           <div>
-            <div className="text-xs text-neutral-500">Last payout date</div>
-            <div className="text-sm text-neutral-100">
+            <p className={label}>Last payout</p>
+            <p className="mt-1 text-sm font-medium text-[#F9FAFB]">
               {lastPayoutDate ? new Date(lastPayoutDate).toLocaleDateString("en-GB") : "No payouts yet"}
-            </div>
+            </p>
           </div>
         </div>
-      </section>
+      </FintechCard>
     </div>
   );
 }
-
