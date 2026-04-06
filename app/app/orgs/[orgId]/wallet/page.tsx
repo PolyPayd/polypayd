@@ -13,7 +13,7 @@ import type { WalletDashboardLedgerTotals } from "@/lib/walletDashboardAggregate
 import { fetchWalletRecentTransactionRows } from "@/lib/walletRecentTransactions";
 import { getStripeServerClient } from "@/lib/stripe";
 import { FintechCard, PageShell } from "@/components/fintech";
-import { WalletActivityList } from "@/components/wallet/WalletActivityList";
+import { WalletActivityExpandable } from "@/components/wallet/WalletActivityExpandable";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +22,6 @@ type Params = { orgId: string };
 function money(amount: number, currency = "GBP") {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(amount);
 }
-
-const TRANSACTION_PREVIEW = 5;
 
 export default async function WalletPage({
   params,
@@ -97,8 +95,6 @@ export default async function WalletPage({
   };
 
   const recentRows = await fetchWalletRecentTransactionRows(supabase, wallet.id);
-  const previewRows = recentRows.slice(0, TRANSACTION_PREVIEW);
-  const hasMoreTransactions = recentRows.length > TRANSACTION_PREVIEW;
 
   const available = wallet.current_balance;
   const pending = wallet.pending_balance;
@@ -214,23 +210,12 @@ export default async function WalletPage({
         </div>
       </FintechCard>
 
-      {/* Activity (preview) */}
+      {/* Activity — expand/collapse in place (client) */}
       <FintechCard interactive={false}>
         <h2 className="text-lg font-semibold tracking-tight text-[#F9FAFB]">Activity</h2>
         <p className="mt-1 text-sm text-[#6B7280]">Recent credits and debits</p>
 
-        <WalletActivityList rows={previewRows} currency={currency} className="mt-6" />
-
-        {hasMoreTransactions ? (
-          <div className="mt-1 border-t border-white/[0.04] pt-4">
-            <Link
-              href={`/app/orgs/${orgId}/wallet/transactions`}
-              className="text-sm font-medium text-[#3B82F6] transition-colors hover:text-[#60A5FA]"
-            >
-              See all
-            </Link>
-          </div>
-        ) : null}
+        <WalletActivityExpandable rows={recentRows} currency={currency} />
       </FintechCard>
     </PageShell>
   );
