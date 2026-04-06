@@ -26,9 +26,17 @@ const labelClass = "mb-2 block text-xs font-medium text-[#9CA3AF]";
 
 const STANDARD_CURRENCY = "GBP";
 
+/** Claim Link — primary live product */
+const payoutTypeClaimClasses =
+  "flex cursor-pointer gap-4 rounded-2xl border border-[#22C55E]/25 bg-[#22C55E]/[0.08] px-4 py-4 shadow-sm shadow-[#22C55E]/5 transition-colors has-[:checked]:border-[#22C55E]/50 has-[:checked]:bg-[#22C55E]/14";
+
+/** Bulk Send — preview, secondary */
+const payoutTypeBulkClasses =
+  "flex cursor-pointer gap-4 rounded-2xl border border-white/[0.06] bg-[#0B0F14]/40 px-4 py-3.5 transition-colors has-[:checked]:border-[#3B82F6]/35 has-[:checked]:bg-[#3B82F6]/10";
+
 export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency }: CreateBatchFormProps) {
   const [step, setStep] = useState(1);
-  const [batchType, setBatchType] = useState<"standard" | "claimable">("standard");
+  const [batchType, setBatchType] = useState<"standard" | "claimable">("claimable");
   const [batchName, setBatchName] = useState("");
   const [claimCurrency, setClaimCurrency] = useState("GBP");
   const [expiresAt, setExpiresAt] = useState("");
@@ -139,7 +147,26 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
             </div>
 
             <div className="mt-8 space-y-3">
-              <label className="flex cursor-pointer gap-4 rounded-2xl border border-transparent bg-[#0B0F14]/55 px-4 py-4 transition-colors has-[:checked]:border-[#3B82F6]/35 has-[:checked]:bg-[#3B82F6]/10">
+              <label className={payoutTypeClaimClasses}>
+                <input
+                  type="radio"
+                  name="batchTypeRadio"
+                  value="claimable"
+                  checked={false}
+                  onChange={selectClaimable}
+                  className="mt-1 border-[#6B7280] text-[#22C55E] focus:ring-[#22C55E]"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-base font-semibold text-[#F9FAFB]">Claim link</span>
+                    <FintechBadge tone="success">Live</FintechBadge>
+                  </span>
+                  <span className="mt-1 block text-sm leading-relaxed text-[#9CA3AF]">
+                    Recipients join, then you fund — wallet payouts are live now.
+                  </span>
+                </span>
+              </label>
+              <label className={payoutTypeBulkClasses}>
                 <input
                   type="radio"
                   name="batchTypeRadio"
@@ -150,30 +177,11 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
                 />
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-[#F9FAFB]">Bulk send</span>
+                    <span className="font-semibold text-[#E5E7EB]">Bulk send</span>
                     <FintechBadge tone="info">Preview</FintechBadge>
                   </span>
                   <span className="mt-1 block text-sm leading-relaxed text-[#6B7280]">
                     Upload a CSV and review how bank payouts will work. Coming soon.
-                  </span>
-                </span>
-              </label>
-              <label className="flex cursor-pointer gap-4 rounded-2xl border border-transparent bg-[#0B0F14]/55 px-4 py-4 transition-colors has-[:checked]:border-[#3B82F6]/35 has-[:checked]:bg-[#3B82F6]/10">
-                <input
-                  type="radio"
-                  name="batchTypeRadio"
-                  value="claimable"
-                  checked={false}
-                  onChange={selectClaimable}
-                  className="mt-1 border-[#6B7280] text-[#3B82F6] focus:ring-[#3B82F6]"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-[#F9FAFB]">Claim link</span>
-                    <FintechBadge tone="success">Live</FintechBadge>
-                  </span>
-                  <span className="mt-1 block text-sm leading-relaxed text-[#6B7280]">
-                    Recipients join, then you fund — wallet payouts are live now.
                   </span>
                 </span>
               </label>
@@ -243,7 +251,26 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
           <h2 className="text-lg font-semibold tracking-tight text-[#F9FAFB] sm:text-xl">Payout type</h2>
           <p className="mt-1 text-sm text-[#6B7280]">Choose how you want to pay people.</p>
           <div className="mt-8 space-y-3">
-            <label className="flex cursor-pointer gap-4 rounded-2xl border border-transparent bg-[#0B0F14]/55 px-4 py-4 transition-colors has-[:checked]:border-[#3B82F6]/35 has-[:checked]:bg-[#3B82F6]/10">
+            <label className={payoutTypeClaimClasses}>
+              <input
+                type="radio"
+                name="batchTypeRadio"
+                value="claimable"
+                checked
+                onChange={selectClaimable}
+                className="mt-1 border-[#6B7280] text-[#22C55E] focus:ring-[#22C55E]"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="text-base font-semibold text-[#F9FAFB]">Claim link</span>
+                  <FintechBadge tone="success">Live</FintechBadge>
+                </span>
+                <span className="mt-1 block text-sm leading-relaxed text-[#9CA3AF]">
+                  Share a link; recipients join, then you fund.
+                </span>
+              </span>
+            </label>
+            <label className={payoutTypeBulkClasses}>
               <input
                 type="radio"
                 name="batchTypeRadio"
@@ -254,30 +281,11 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
               />
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-[#F9FAFB]">Bulk send</span>
+                  <span className="font-semibold text-[#E5E7EB]">Bulk send</span>
                   <FintechBadge tone="info">Preview</FintechBadge>
                 </span>
                 <span className="mt-1 block text-sm leading-relaxed text-[#6B7280]">
                   Upload a CSV and review how bank payouts will work. Coming soon.
-                </span>
-              </span>
-            </label>
-            <label className="flex cursor-pointer gap-4 rounded-2xl border border-transparent bg-[#0B0F14]/55 px-4 py-4 transition-colors has-[:checked]:border-[#3B82F6]/35 has-[:checked]:bg-[#3B82F6]/10">
-              <input
-                type="radio"
-                name="batchTypeRadio"
-                value="claimable"
-                checked
-                onChange={selectClaimable}
-                className="mt-1 border-[#6B7280] text-[#3B82F6] focus:ring-[#3B82F6]"
-              />
-              <span className="min-w-0 flex-1">
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-[#F9FAFB]">Claim link</span>
-                  <FintechBadge tone="success">Live</FintechBadge>
-                </span>
-                <span className="mt-1 block text-sm leading-relaxed text-[#6B7280]">
-                  Share a link; recipients join, then you fund.
                 </span>
               </span>
             </label>
