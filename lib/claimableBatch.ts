@@ -71,7 +71,8 @@ export async function getClaimableBatchInfo(
 
   const batch = batchRow as ClaimableBatchRow;
 
-  let allocationMode: "even" | "custom" | null = batch.allocation_mode === "custom" ? "custom" : batch.allocation_mode === "even" ? "even" : null;
+  const allocationMode: "even" | "custom" | null =
+    batch.allocation_mode === "custom" ? "custom" : batch.allocation_mode === "even" ? "even" : null;
 
   if (batch.batch_type !== "claimable") {
     return { ...empty, batch, nextClaimAmount: null, allocationMode: null, statusMessage: "This batch cannot be joined with a code.", statusType: "error" };
@@ -103,19 +104,22 @@ export async function getClaimableBatchInfo(
   }
 
   let nextClaimAmount: number | null = null;
-  if ((allocationMode === "even" || allocationMode === null) && batch.amount_per_claim != null && Number(batch.amount_per_claim) > 0) {
+  const nextSlotRes = await supabase
+    .from("claim_slots")
+    .select("amount")
+    .eq("batch_id", batch.id)
+    .eq("status", "open")
+    .order("slot_index", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!nextSlotRes.error && nextSlotRes.data?.amount != null) {
+    nextClaimAmount = Number(nextSlotRes.data.amount);
+  } else if (
+    (allocationMode === "even" || allocationMode === null) &&
+    batch.amount_per_claim != null &&
+    Number(batch.amount_per_claim) > 0
+  ) {
     nextClaimAmount = Number(batch.amount_per_claim);
-  }
-  if (allocationMode === "custom") {
-    const nextSlotRes = await supabase
-      .from("claim_slots")
-      .select("amount")
-      .eq("batch_id", batch.id)
-      .eq("status", "open")
-      .order("slot_index", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (!nextSlotRes.error && nextSlotRes.data?.amount != null) nextClaimAmount = Number(nextSlotRes.data.amount);
   }
 
   let alreadyJoined = false;

@@ -38,7 +38,6 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
   const [step, setStep] = useState(1);
   const [batchType, setBatchType] = useState<"standard" | "claimable">("claimable");
   const [batchName, setBatchName] = useState("");
-  const [claimCurrency, setClaimCurrency] = useState("GBP");
   const [expiresAt, setExpiresAt] = useState("");
   const [claimableTotalPool, setClaimableTotalPool] = useState("");
   const [claimableMaxRecipients, setClaimableMaxRecipients] = useState("");
@@ -49,18 +48,14 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
   const maxParsed = parseInt(claimableMaxRecipients.trim(), 10);
   const maxRecipientsValid = Number.isInteger(maxParsed) && maxParsed >= 1;
   const maxNum = maxRecipientsValid ? maxParsed : 0;
-  const perRecipient = maxRecipientsValid && maxNum > 0 ? totalNum / maxNum : 0;
-  const totalCents = Math.round(totalNum * 100);
-  const evenSplitValid =
-    maxRecipientsValid && totalNum > 0 && totalCents % maxNum === 0 && perRecipient > 0;
   const exceedsBalance = batchType === "claimable" && totalNum > spendableBalance;
-  const canSubmitClaimable =
-    batchType !== "claimable" || (maxRecipientsValid && !exceedsBalance && evenSplitValid);
+  const claimPoolInputsValid = maxRecipientsValid && totalNum > 0 && !exceedsBalance;
+  const canSubmitClaimable = batchType !== "claimable" || claimPoolInputsValid;
 
   const canGoStep2 = batchName.trim().length > 0;
   const canGoStep3 =
     batchType === "claimable"
-      ? Boolean(expiresAt.trim()) && maxRecipientsValid && !exceedsBalance && evenSplitValid && totalNum > 0
+      ? Boolean(expiresAt.trim()) && claimPoolInputsValid
       : true;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -239,7 +234,7 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
       <input type="hidden" name="orgId" value={orgId} />
       <input type="hidden" name="batchType" value="claimable" />
       <input type="hidden" name="name" value={batchName} />
-      <input type="hidden" name="currency" value={claimCurrency} />
+      <input type="hidden" name="currency" value={currency} />
       <input type="hidden" name="totalPoolAmount" value={claimableTotalPool} />
       <input type="hidden" name="maxClaims" value={claimableMaxRecipients} />
       <input type="hidden" name="expiresAt" value={expiresAt} />
@@ -322,15 +317,10 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
               join.
             </p>
             <div>
-              <label htmlFor="currency-claimable" className={labelClass}>
-                Currency
-              </label>
-              <FintechInput
-                id="currency-claimable"
-                type="text"
-                value={claimCurrency}
-                onChange={(e) => setClaimCurrency(e.target.value)}
-              />
+              <span className={labelClass}>Currency</span>
+              <div className="rounded-xl border border-white/[0.08] bg-[#161F2B] px-4 py-3 text-sm font-medium text-[#F9FAFB]">
+                {currency}
+              </div>
             </div>
             <div>
               <label htmlFor="totalPoolAmount" className={labelClass}>
@@ -383,9 +373,7 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
               <p className="text-sm text-[#9CA3AF]">
                 {!maxRecipientsValid
                   ? "Enter max recipients for per-person amount."
-                  : evenSplitValid
-                    ? `${formatMoney(perRecipient, currency)} each (even split).`
-                    : "Total must divide evenly by max recipients to 2 decimal places."}
+                  : "Amounts will be split automatically across recipients."}
               </p>
             )}
           </div>
@@ -416,11 +404,11 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-[#6B7280]">Currency</dt>
-              <dd className="font-medium text-[#F9FAFB]">{claimCurrency}</dd>
+              <dd className="font-medium text-[#F9FAFB]">{currency}</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-[#6B7280]">Pool</dt>
-              <dd className="tabular-nums text-[#F9FAFB]">{formatMoney(totalNum, claimCurrency)}</dd>
+              <dd className="tabular-nums text-[#F9FAFB]">{formatMoney(totalNum, currency)}</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-[#6B7280]">Max recipients</dt>
@@ -435,7 +423,7 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
             <FintechButton
               type="submit"
               className="min-h-12 px-8"
-              disabled={exceedsBalance || !evenSplitValid || !canSubmitClaimable}
+              disabled={exceedsBalance || !canSubmitClaimable}
             >
               Create payout
             </FintechButton>

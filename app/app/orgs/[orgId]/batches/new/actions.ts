@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { isClaimableSchemaError, CLAIMABLE_SCHEMA_MESSAGE } from "@/lib/dbSchema";
+import { claimLinkFloorPerRecipientPounds, claimLinkSlotAmountsPounds } from "@/lib/claimLinkAutoSplit";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -90,13 +91,12 @@ export async function createBatch(formData: FormData) {
       );
     }
 
-    const totalCents = Math.round(totalPoolAmount * 100);
-    if (totalCents % maxClaims !== 0) {
-      throw new Error(
-        "Total must divide evenly by max recipients to 2 decimal places (e.g. £300 ÷ 100 = £3.00)."
-      );
+    const slotAmounts = claimLinkSlotAmountsPounds(totalPoolAmount, maxClaims);
+    const slotSumCents = slotAmounts.reduce((s, a) => s + Math.round(a * 100), 0);
+    if (slotSumCents !== Math.round(totalPoolAmount * 100)) {
+      throw new Error("Could not compute claim amounts for this pool. Try rounding the total to 2 decimal places.");
     }
-    const amountPerClaim = totalCents / maxClaims / 100;
+    const amountPerClaim = claimLinkFloorPerRecipientPounds(totalPoolAmount, maxClaims);
 
     const batchCode = await generateUniqueBatchCode(supabase);
 
@@ -115,7 +115,7 @@ export async function createBatch(formData: FormData) {
         recipient_count: 0,
         total_amount: totalPoolAmount,
         amount_per_claim: amountPerClaim,
-        allocation_mode: "even",
+        allocation_mode: "custom",
         funded_by_user_id: userId,
       })
       .select("id")
@@ -124,6 +124,20 @@ export async function createBatch(formData: FormData) {
     if (error) {
       if (isClaimableSchemaError(error)) throw new Error(CLAIMABLE_SCHEMA_MESSAGE);
       throw new Error(error.message);
+    }
+
+    const slotRows = slotAmounts.map((amount, slot_index) => ({
+      batch_id: data.id,
+      slot_index,
+      amount,
+      status: "open" as const,
+    }));
+
+    const { error: slotsError } = await supabase.from("claim_slots").insert(slotRows);
+    if (slotsError) {
+      await supabase.from("batches").delete().eq("id", data.id);
+      if (isClaimableSchemaError(slotsError)) throw new Error(CLAIMABLE_SCHEMA_MESSAGE);
+      throw new Error(slotsError.message || "Failed to create claim slots for this batch.");
     }
 
     const { error: auditErr } = await supabase.from("audit_events").insert({
