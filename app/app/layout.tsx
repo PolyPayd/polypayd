@@ -24,7 +24,7 @@ export default async function AppLayout({
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3.5 sm:px-5">
           <div className="flex min-w-0 flex-1 items-center gap-5 sm:gap-8">
             <Link
-              href="/app/wallet"
+              href="/app/profile"
               className="shrink-0 text-[15px] font-semibold tracking-tight text-[#F9FAFB] transition-opacity hover:opacity-90"
             >
               PolyPayd
