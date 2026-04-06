@@ -44,12 +44,21 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [previewRows, setPreviewRows] = useState<BulkSendPreviewRow[]>([]);
 
-  const totalNum = parseFloat(claimableTotalPool) || 0;
-  const maxParsed = parseInt(claimableMaxRecipients.trim(), 10);
-  const maxRecipientsValid = Number.isInteger(maxParsed) && maxParsed >= 1;
-  const maxNum = maxRecipientsValid ? maxParsed : 0;
-  const exceedsBalance = batchType === "claimable" && totalNum > spendableBalance;
-  const claimPoolInputsValid = maxRecipientsValid && totalNum > 0 && !exceedsBalance;
+  const poolStr = claimableTotalPool.trim();
+  const pool = poolStr === "" ? NaN : Number(claimableTotalPool);
+  const poolValid = Number.isFinite(pool) && pool > 0;
+
+  const maxStr = claimableMaxRecipients.trim();
+  const recipients = maxStr === "" ? NaN : Number(claimableMaxRecipients);
+  const maxRecipientsValid = Number.isFinite(recipients) && Number.isInteger(recipients) && recipients > 0;
+
+  const totalNum = poolValid ? pool : 0;
+  const maxNum = maxRecipientsValid ? recipients : 0;
+  const exceedsBalance = batchType === "claimable" && poolValid && pool > spendableBalance;
+  const claimPoolInputsValid = poolValid && maxRecipientsValid && !exceedsBalance;
+
+  const poolFieldError = poolStr !== "" && !poolValid;
+  const maxRecipientsFieldError = maxStr !== "" && !maxRecipientsValid;
   const canSubmitClaimable = batchType !== "claimable" || claimPoolInputsValid;
 
   const canGoStep2 = batchName.trim().length > 0;
@@ -61,7 +70,7 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitError(null);
-    if (batchType === "claimable" && exceedsBalance) return;
+    if (batchType === "claimable" && (!poolValid || !maxRecipientsValid || exceedsBalance)) return;
     const form = e.currentTarget;
     const formData = new FormData(form);
     try {
@@ -330,13 +339,16 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
               <FintechInput
                 id="totalPoolAmount"
                 type="number"
+                inputMode="decimal"
                 step="0.01"
-                min="0.01"
-                required
+                min={0}
                 placeholder="300.00"
                 value={claimableTotalPool}
                 onChange={(e) => setClaimableTotalPool(e.target.value)}
               />
+              {poolFieldError ? (
+                <p className="mt-2 text-sm text-[#EF4444]">Enter a valid amount</p>
+              ) : null}
               {exceedsBalance && (
                 <p className="mt-2 text-sm text-[#EF4444]">
                   Exceeds spendable balance ({formatMoney(spendableBalance, currency)}).
@@ -362,20 +374,20 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
               <FintechInput
                 id="maxClaims"
                 type="number"
+                inputMode="numeric"
+                step={1}
                 min={1}
-                required
                 placeholder="10"
                 value={claimableMaxRecipients}
                 onChange={(e) => setClaimableMaxRecipients(e.target.value)}
               />
+              {maxRecipientsFieldError ? (
+                <p className="mt-2 text-sm text-[#EF4444]">Enter a valid number of recipients</p>
+              ) : null}
             </div>
-            {totalNum > 0 && (
-              <p className="text-sm text-[#9CA3AF]">
-                {!maxRecipientsValid
-                  ? "Enter max recipients for per-person amount."
-                  : "Amounts will be split automatically across recipients."}
-              </p>
-            )}
+            {poolValid && maxRecipientsValid ? (
+              <p className="text-sm text-[#9CA3AF]">Amounts will be split automatically across recipients.</p>
+            ) : null}
           </div>
 
           <div className="mt-10 flex flex-wrap justify-between gap-3">
