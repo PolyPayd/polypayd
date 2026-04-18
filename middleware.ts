@@ -1,8 +1,16 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 const isPublicRoute = createRouteMatcher([
+  // Marketing
+  "/",
+
   "/sign-in(.*)",
   "/sign-up(.*)",
+
+  // Recipient flows (pages gate actions with auth(); must load while signed out)
+  "/app/join-batch(.*)",
+  "/app/claim(.*)",
+  "/app/claim-payout(.*)",
 
   // allow curl testing for CSV upload
   "/api/orgs/(.*)/batches/(.*)/upload-csv",
