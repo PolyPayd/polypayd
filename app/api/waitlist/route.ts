@@ -4,7 +4,7 @@ import { getResend } from "@/lib/resend";
 export const runtime = "nodejs";
 
 const FOUNDER_TO = "founder@polypayd.co.uk";
-const FROM = "PolyPayd <hello@mail.polypayd.co.uk>";
+const FROM = "PolyPayd <founder@polypayd.co.uk>";
 const SUBJECT = "New PolyPayd waitlist enquiry";
 
 function isNonEmptyString(value: unknown): value is string {
