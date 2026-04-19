@@ -98,13 +98,13 @@ export function LandingWaitlistForm({ id = "contact" }: { id?: string }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h3 className="mt-6 text-xl font-semibold text-[#F9FAFB]">Thanks — we&apos;ve got your note</h3>
+        <h3 className="mt-6 text-xl font-semibold text-[#F9FAFB]">Thanks — your enquiry has been received.</h3>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[#9CA3AF]">
-          We&apos;ll review your enquiry and reply from{" "}
-          <a href="mailto:hello@mail.polypayd.co.uk" className="font-medium text-[#3B82F6] hover:underline">
-            hello@mail.polypayd.co.uk
-          </a>{" "}
-          when we can.
+          We&apos;ll review your submission and follow up shortly from{" "}
+          <a href="mailto:founder@polypayd.co.uk" className="font-medium text-[#3B82F6] hover:underline">
+            founder@polypayd.co.uk
+          </a>
+          .
         </p>
         <button
           type="button"
