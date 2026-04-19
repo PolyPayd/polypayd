@@ -76,7 +76,7 @@ export default async function JoinBatchPage({
     allocationMode = info.allocationMode;
   }
 
-  const displayCode = batch ? formatBatchCodeForDisplay(batch.batch_code ?? code) : code || "—";
+  const displayCode = batch ? formatBatchCodeForDisplay(batch.batch_code ?? code) : code || "-";
   const canJoin = batch && statusType === "success" && !alreadyJoined && !!userId;
 
   return (
@@ -132,7 +132,7 @@ export default async function JoinBatchPage({
               <dl className="mt-6 space-y-5 text-sm">
                 <div>
                   <dt className="text-xs font-medium text-[#6B7280]">Name</dt>
-                  <dd className="mt-1 font-medium text-[#F9FAFB]">{batch.name ?? "—"}</dd>
+                  <dd className="mt-1 font-medium text-[#F9FAFB]">{batch.name ?? "-"}</dd>
                 </div>
                 <div>
                   <dt className="text-xs font-medium text-[#6B7280]">Pool</dt>

@@ -1,5 +1,5 @@
 -- Fix claim_batch_recipient: ON CONFLICT duplicate path returned success without verifying
--- wallet credits or batch_claims rows — recipients saw "success" / batch "completed" with £0 available.
+-- wallet credits or batch_claims rows: recipients saw "success" / batch "completed" with £0 available.
 -- Also credit legacy process_claimable_batch_payout to current_balance (available), not pending_balance.
 
 -- ---------------------------------------------------------------------------

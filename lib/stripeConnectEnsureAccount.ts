@@ -119,7 +119,7 @@ export async function ensureStripeExpressAccountForUser(opts: {
     return {
       ok: false,
       error:
-        "No valid Stripe Connect account for this deployment. Your saved connection may be from another environment—use “Connect bank” from the wallet to set up Connect again.",
+        "No valid Stripe Connect account for this deployment. Your saved connection may be from another environment. Use “Connect bank” from the wallet to set up Connect again.",
       status: 400,
       errorCode: "STRIPE_CONNECT_ACCOUNT_INVALID_OR_MISSING",
     };

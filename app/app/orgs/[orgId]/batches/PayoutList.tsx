@@ -127,7 +127,7 @@ export function PayoutList({ orgId, batches, showingArchived }: Props) {
                                 month: "short",
                                 year: "numeric",
                               })
-                            : "—"}
+                            : "-"}
                         </span>
                       </div>
                     </Link>

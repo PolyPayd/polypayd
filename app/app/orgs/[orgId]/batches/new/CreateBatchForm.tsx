@@ -26,11 +26,11 @@ const labelClass = "mb-2 block text-xs font-medium text-[#9CA3AF]";
 
 const STANDARD_CURRENCY = "GBP";
 
-/** Claim Link — primary live product */
+/** Claim Link, primary live product */
 const payoutTypeClaimClasses =
   "flex cursor-pointer gap-4 rounded-2xl border border-[#22C55E]/25 bg-[#22C55E]/[0.08] px-4 py-4 shadow-sm shadow-[#22C55E]/5 transition-colors has-[:checked]:border-[#22C55E]/50 has-[:checked]:bg-[#22C55E]/14";
 
-/** Bulk Send — preview, secondary */
+/** Bulk Send, preview, secondary */
 const payoutTypeBulkClasses =
   "flex cursor-pointer gap-4 rounded-2xl border border-white/[0.06] bg-[#0B0F14]/40 px-4 py-3.5 transition-colors has-[:checked]:border-[#3B82F6]/35 has-[:checked]:bg-[#3B82F6]/10";
 
@@ -166,7 +166,7 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
                     <FintechBadge tone="success">Live</FintechBadge>
                   </span>
                   <span className="mt-1 block text-sm leading-relaxed text-[#9CA3AF]">
-                    Recipients join, then you fund — wallet payouts are live now.
+                    Recipients join, then you fund, wallet payouts are live now.
                   </span>
                 </span>
               </label>
@@ -408,7 +408,7 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
           <dl className="mt-8 space-y-4 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-[#6B7280]">Name</dt>
-              <dd className="font-medium text-[#F9FAFB]">{batchName || "—"}</dd>
+              <dd className="font-medium text-[#F9FAFB]">{batchName || "-"}</dd>
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-[#6B7280]">Type</dt>
@@ -424,7 +424,7 @@ export function CreateBatchForm({ orgId, createBatch, spendableBalance, currency
             </div>
             <div className="flex justify-between gap-4">
               <dt className="text-[#6B7280]">Max recipients</dt>
-              <dd className="text-[#F9FAFB]">{maxNum || "—"}</dd>
+              <dd className="text-[#F9FAFB]">{maxNum || "-"}</dd>
             </div>
           </dl>
           {submitError && <p className="mt-6 text-sm text-[#EF4444]">{submitError}</p>}

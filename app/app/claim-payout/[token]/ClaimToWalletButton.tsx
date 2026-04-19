@@ -35,7 +35,7 @@ export function ClaimToWalletButton({ token }: Props) {
       }
       if (data.duplicate) {
         toast.info("Already in your wallet", {
-          description: "This payout was credited earlier—nothing else to do.",
+          description: "This payout was credited earlier, nothing else to do.",
         });
       } else {
         toast.success("Added to your wallet", {

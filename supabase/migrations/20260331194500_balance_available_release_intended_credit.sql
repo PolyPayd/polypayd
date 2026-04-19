@@ -1,5 +1,5 @@
 -- Fix: pending → current release must use intended wallet credit from wallet_topup_release_queue,
--- capped only by that row's residual and the wallet's pending_balance — never Stripe's net
+-- capped only by that row's residual and the wallet's pending_balance, never Stripe's net
 -- available-balance delta (fees already covered by the customer's processing uplift on the PI).
 
 comment on table public.stripe_platform_gbp_checkpoint is
@@ -68,7 +68,7 @@ begin
       updated_at = now()
   where livemode = p_livemode;
 
-  -- Release FIFO: each queue row's unreleased intended credit, up to wallet pending — independent of v_delta_minor.
+  -- Release FIFO: each queue row's unreleased intended credit, up to wallet pending, independent of v_delta_minor.
 
   for r in
     select q.id, q.wallet_id, q.amount_gbp, q.released_to_current_gbp, q.consumed_by_payout_gbp

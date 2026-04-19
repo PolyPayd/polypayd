@@ -15,7 +15,7 @@ export type WalletAccountCardProps = {
   /** Optional batch-claims sub-line when amount is material. */
   claimsFromBatch?: number;
   actions: ReactNode;
-  /** Same card surface — e.g. withdraw flow expanded below actions. */
+  /** Same card surface, e.g. withdraw flow expanded below actions. */
   footer?: ReactNode;
   className?: string;
 };

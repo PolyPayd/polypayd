@@ -28,7 +28,7 @@ export function ImpactWalletCard({ userImpactTotal, currency, schemaReady, embed
             )}
           </p>
           {!schemaReady && (
-            <p className="mt-1 text-xs text-[#F59E0B]">Impact schema not deployed — showing £0.00</p>
+            <p className="mt-1 text-xs text-[#F59E0B]">Impact schema not deployed, showing £0.00</p>
           )}
         </div>
         <Link

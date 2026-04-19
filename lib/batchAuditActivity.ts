@@ -34,7 +34,7 @@ export function formatAuditEventTitle(eventType: string): string {
     retry_failed_started: "Retry failed payouts started",
     retry_failed_completed: "Retry failed payouts completed",
     claimable_payouts_started: "Wallet payouts unlocked",
-    batch_funded: "Pool reserved — claim links enabled",
+    batch_funded: "Pool reserved: claim links enabled",
     claim_completed: "Wallet credit completed",
     wallet_topup_pending: "Top-up received (pending)",
     wallet_topup_available: "Top-up cleared to available",

@@ -1,4 +1,4 @@
--- LIVE SUPABASE — paste in SQL Editor when impact_ledger is missing.
+-- LIVE SUPABASE: paste in SQL Editor when impact_ledger is missing.
 -- Prerequisites: public.ledger_transactions, public.wallets exist.
 -- Creates: impact_ledger, impact_distributions, indexes, apply_impact_from_platform_fee(uuid, numeric, text).
 -- Safe to re-run.

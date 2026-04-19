@@ -8,7 +8,7 @@ export const BATCH_CODE_LEGACY_PREFIX = "JOIN-";
 
 /** User-facing code: always PPD- for claimable batches that use the standard prefixes. */
 export function formatBatchCodeForDisplay(stored: string | null | undefined): string {
-  if (stored == null || String(stored).trim() === "") return "—";
+  if (stored == null || String(stored).trim() === "") return "-";
   const u = String(stored).trim().toUpperCase().replace(/\s+/g, "-");
   if (u.startsWith(BATCH_CODE_LEGACY_PREFIX)) {
     return `${BATCH_CODE_PUBLIC_PREFIX}${u.slice(BATCH_CODE_LEGACY_PREFIX.length)}`;
@@ -45,6 +45,6 @@ export function batchCodesForLookup(normalizedUpper: string): string[] {
 /** Path under the app router for joining via claim link (display code in segment). */
 export function claimJoinAppPath(displayBatchCode: string): string {
   const d = displayBatchCode.trim();
-  if (!d || d === "—") return "/app/join-batch";
+  if (!d || d === "-") return "/app/join-batch";
   return `/app/claim/${encodeURIComponent(d)}`;
 }

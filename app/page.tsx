@@ -5,9 +5,9 @@ import type { ReactNode } from "react";
 import { LandingWaitlistForm } from "@/components/marketing/LandingWaitlistForm";
 
 export const metadata: Metadata = {
-  title: "PolyPayd — Bulk payouts, wallet-led, audit-ready",
+  title: "PolyPayd: Bulk payouts, wallet-led, audit-ready",
   description:
-    "PolyPayd is payout software for teams that fund batches, move money through wallets, and need recipients to claim with clarity — built for businesses, individuals, and partner-grade audit trails.",
+    "PolyPayd is payout software for teams that fund batches, move money through wallets, and need recipients to claim with clarity, built for businesses, individuals, and partner-grade audit trails.",
 };
 
 const MAIL = "mailto:founder@polypayd.co.uk";
@@ -176,7 +176,7 @@ export default function HomePage() {
             </h1>
             <p className="mx-auto mt-7 max-w-2xl text-base leading-[1.7] text-[#9CA3AF] sm:text-lg sm:leading-relaxed">
               PolyPayd is the operating layer for batch money movement: fund a wallet, group recipients into
-              batches, and let people claim into their own wallets — with balances and activity your finance team
+              batches, and let people claim into their own wallets, with balances and activity your finance team
               can defend in a partner review.
             </p>
             <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:mt-11 sm:flex-row sm:justify-center sm:gap-4">
@@ -188,7 +188,7 @@ export default function HomePage() {
 
           <p className="mx-auto mt-14 max-w-2xl text-center text-xs leading-relaxed text-[#6B7280] sm:mt-16">
             Built for regulated payout contexts: clear states, traceable activity, and a product narrative that
-            stands up next to infrastructure partners — without overclaiming what&apos;s still on the roadmap.
+            stands up next to infrastructure partners, without overclaiming what&apos;s still on the roadmap.
           </p>
 
           <div className="mx-auto mt-10 max-w-6xl sm:mt-12">
@@ -211,7 +211,7 @@ export default function HomePage() {
                 <SectionHeader
                   eyebrow="For organisations"
                   title="Businesses that move programme money"
-                  description="Agencies, platforms, and in-house teams use PolyPayd when payouts are the product — not a side spreadsheet. One wallet, batched sends, and a recipient experience that doesn’t erode trust."
+                  description="Agencies, platforms, and in-house teams use PolyPayd when payouts are the product, not a side spreadsheet. One wallet, batched sends, and a recipient experience that doesn’t erode trust."
                 />
                 <ul className="mt-8 space-y-4 text-sm leading-relaxed text-[#9CA3AF] sm:text-[15px]">
                   <li className="flex gap-3">
@@ -224,7 +224,7 @@ export default function HomePage() {
                   </li>
                   <li className="flex gap-3">
                     <span className="mt-2 h-1 w-4 shrink-0 rounded-full bg-[#3B82F6]/90" aria-hidden />
-                    Room to align with your compliance story — activity is structured for review, not buried in exports.
+                    Room to align with your compliance story, activity is structured for review, not buried in exports.
                   </li>
                 </ul>
               </div>
@@ -256,7 +256,7 @@ export default function HomePage() {
                 <SectionHeader
                   eyebrow="For people paid"
                   title="Individuals who need clarity, not confusion"
-                  description="Recipients aren’t your back-office. PolyPayd keeps claiming and wallet credit understandable — fewer “where’s my money?” threads, more confidence in your programme."
+                  description="Recipients aren’t your back-office. PolyPayd keeps claiming and wallet credit understandable, fewer “where’s my money?” threads, more confidence in your programme."
                 />
                 <ul className="mt-8 space-y-4 text-sm leading-relaxed text-[#9CA3AF] sm:text-[15px]">
                   <li className="flex gap-3">
@@ -269,7 +269,7 @@ export default function HomePage() {
                   </li>
                   <li className="flex gap-3">
                     <span className="mt-2 h-1 w-4 shrink-0 rounded-full bg-emerald-500/80" aria-hidden />
-                    Built to respect that for many users, this payment is high-stakes — UI stays calm and explicit.
+                    Built to respect that for many users, this payment is high-stakes, UI stays calm and explicit.
                   </li>
                 </ul>
               </div>
@@ -291,14 +291,14 @@ export default function HomePage() {
               <SurfaceCard hover={false} className="border-white/[0.07]">
                 <h3 className="text-lg font-semibold text-[#F9FAFB]">Batch-first, not blob-first</h3>
                 <p className="mt-3 text-sm leading-relaxed text-[#9CA3AF]">
-                  Group recipients and amounts into batches you can name, review, and fund deliberately — instead of
+                  Group recipients and amounts into batches you can name, review, and fund deliberately, instead of
                   one opaque file drop and a hope.
                 </p>
               </SurfaceCard>
               <SurfaceCard hover={false} className="border-white/[0.07]">
                 <h3 className="text-lg font-semibold text-[#F9FAFB]">Funding that matches reality</h3>
                 <p className="mt-3 text-sm leading-relaxed text-[#9CA3AF]">
-                  Tie funding to batch lifecycle so available balance reflects what you can still send — critical
+                  Tie funding to batch lifecycle so available balance reflects what you can still send, critical
                   when partners ask how you control disbursement risk.
                 </p>
               </SurfaceCard>
@@ -323,13 +323,13 @@ export default function HomePage() {
                 <SectionHeader
                   eyebrow="Governance"
                   title="Tracking and audit trail"
-                  description="When a payment partner or internal audit asks what happened, you need a straight answer. PolyPayd surfaces wallet activity and batch-related movement so you can reconstruct the story from the product — not from ad-hoc exports."
+                  description="When a payment partner or internal audit asks what happened, you need a straight answer. PolyPayd surfaces wallet activity and batch-related movement so you can reconstruct the story from the product, not from ad-hoc exports."
                 />
                 <div className="mt-10 space-y-4">
                   {[
                     "Chronological activity tied to wallet credits, debits, and batch context where applicable.",
                     "Separation of available vs pending so “in flight” doesn’t look like “lost”.",
-                    "Designed to complement your PSP and banking partners — we focus on operator truth inside PolyPayd.",
+                    "Designed to complement your PSP and banking partners, we focus on operator truth inside PolyPayd.",
                   ].map((t) => (
                     <div
                       key={t}
@@ -354,13 +354,13 @@ export default function HomePage() {
 
         <SectionDivider />
 
-        {/* Problem — tight */}
+        {/* Problem, tight */}
         <section className="py-20 sm:py-24 lg:py-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <SectionHeader
               eyebrow="Why change"
               title="What breaks today"
-              description="Most teams don’t fail on intent — they fail on coherence between tools, bank reality, and what recipients experience."
+              description="Most teams don’t fail on intent, they fail on coherence between tools, bank reality, and what recipients experience."
             />
             <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:mt-14 lg:grid-cols-3 lg:gap-6">
               {[
@@ -370,11 +370,11 @@ export default function HomePage() {
                 },
                 {
                   title: "Fragile handoffs",
-                  body: "Files and emails don’t carry state — so every payout run becomes a bespoke rescue mission.",
+                  body: "Files and emails don’t carry state, so every payout run becomes a bespoke rescue mission.",
                 },
                 {
                   title: "Recipient doubt",
-                  body: "When claiming feels opaque, trust erodes fast — especially for stipends, refunds, and programme pay.",
+                  body: "When claiming feels opaque, trust erodes fast, especially for stipends, refunds, and programme pay.",
                 },
               ].map((item) => (
                 <SurfaceCard key={item.title}>
@@ -394,20 +394,20 @@ export default function HomePage() {
             <SectionHeader
               eyebrow="Product"
               title="One system of record for the payout journey"
-              description="PolyPayd anchors on the wallet and the batch — so funding, sending, and claiming read as one continuous flow."
+              description="PolyPayd anchors on the wallet and the batch, so funding, sending, and claiming read as one continuous flow."
             />
             <div className="mt-12 grid gap-6 lg:mt-14 lg:grid-cols-2 lg:gap-8">
               <SurfaceCard>
                 <h3 className="text-xl font-semibold text-[#F9FAFB]">Operator-grade clarity</h3>
                 <p className="mt-4 text-sm leading-relaxed text-[#9CA3AF] sm:text-[15px]">
-                  Status and balance language that holds up in a stand-up and in a compliance thread — not a dashboard
+                  Status and balance language that holds up in a stand-up and in a compliance thread, not a dashboard
                   that only looks good in a mock.
                 </p>
               </SurfaceCard>
               <SurfaceCard>
                 <h3 className="text-xl font-semibold text-[#F9FAFB]">Built to extend</h3>
                 <p className="mt-4 text-sm leading-relaxed text-[#9CA3AF] sm:text-[15px]">
-                  Structured for more orgs, wallets, and currencies over time — so you’re not boxed into a one-off
+                  Structured for more orgs, wallets, and currencies over time, so you’re not boxed into a one-off
                   payout hack.
                 </p>
               </SurfaceCard>
@@ -423,7 +423,7 @@ export default function HomePage() {
             <SectionHeader
               eyebrow="Principles"
               title="Why teams take PolyPayd seriously"
-              description="We optimise for credibility with your users and with partners who care how money is moved — not for vanity metrics on a landing page."
+              description="We optimise for credibility with your users and with partners who care how money is moved, not for vanity metrics on a landing page."
             />
             <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:mt-14 lg:gap-5">
               {[
@@ -433,7 +433,7 @@ export default function HomePage() {
                 },
                 {
                   title: "Traceable movement",
-                  body: "Activity is first-class — so you’re not reconstructing history from screenshots.",
+                  body: "Activity is first-class, so you’re not reconstructing history from screenshots.",
                 },
                 {
                   title: "Serious UI discipline",
@@ -441,7 +441,7 @@ export default function HomePage() {
                 },
                 {
                   title: "Partner-ready posture",
-                  body: "We expect you’ll bring PSPs and infrastructure vendors — PolyPayd is built to sit clearly in that stack.",
+                  body: "We expect you’ll bring PSPs and infrastructure vendors, PolyPayd is built to sit clearly in that stack.",
                 },
               ].map((item) => (
                 <div
@@ -475,7 +475,7 @@ export default function HomePage() {
               <div className="lg:col-span-5">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#6B7280]">Impact</p>
                 <h2 className="mt-4 text-3xl font-semibold tracking-tight text-[#F9FAFB] sm:text-4xl sm:leading-[1.15]">
-                  Social impact, embedded — not bolted on
+                  Social impact, embedded, not bolted on
                 </h2>
                 <p className="mt-5 text-base leading-relaxed text-[#9CA3AF] sm:text-lg">
                   When payouts support stipends, community programmes, or matched giving, the mechanics should stay
@@ -487,7 +487,7 @@ export default function HomePage() {
                 <SurfaceCard className="border-emerald-500/[0.07] bg-gradient-to-br from-[#121821] to-[#0f141c]" hover={false}>
                   <ul className="space-y-4 text-sm leading-relaxed text-[#9CA3AF] sm:text-[15px]">
                     {[
-                      "Align programme narrative with actual money movement — recipients and auditors see a coherent story.",
+                      "Align programme narrative with actual money movement, recipients and auditors see a coherent story.",
                       "Avoid “impact as a label” without ledger discipline; structure matters when funds are scrutinised.",
                       "Evolve programmes without rewriting your payout stack from scratch.",
                     ].map((line) => (
@@ -511,7 +511,7 @@ export default function HomePage() {
             <SectionHeader
               eyebrow="Flow"
               title="How it works"
-              description="Fund once, batch sends, recipients claim — with activity you can walk through in a review."
+              description="Fund once, batch sends, recipients claim, with activity you can walk through in a review."
             />
             <ol className="mt-12 grid gap-6 lg:mt-14 lg:grid-cols-3 lg:gap-8">
               {[
@@ -557,7 +557,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Closing CTA — partner tone */}
+        {/* Closing CTA, partner tone */}
         <section id="footer-cta" className="scroll-mt-24 pb-20 sm:pb-24 lg:pb-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="relative overflow-hidden rounded-[1.35rem] border border-white/[0.1] bg-[#121821] px-6 py-12 shadow-[0_32px_64px_-32px_rgba(0,0,0,0.75)] sm:px-10 sm:py-14 lg:px-14 lg:py-16">
@@ -572,7 +572,7 @@ export default function HomePage() {
                 </h2>
                 <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-[#9CA3AF] sm:text-base">
                   We work well alongside payment service providers and banking partners: PolyPayd is the operator and
-                  recipient layer — wallet truth, batches, and claims — while you retain your acquiring, issuing, and
+                  recipient layer, wallet truth, batches, and claims, while you retain your acquiring, issuing, and
                   settlement relationships. No fabricated volumes; we&apos;ll walk through architecture and controls
                   directly.
                 </p>

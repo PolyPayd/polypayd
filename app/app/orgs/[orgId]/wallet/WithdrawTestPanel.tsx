@@ -16,7 +16,7 @@ export type WithdrawFundsPanelProps = {
   availableToWithdrawGbp: number;
   pendingFundsGbp: number;
   hasConnectedBank: boolean;
-  /** No accordion row or nested card — use inside WalletAccountCard. */
+  /** No accordion row or nested card, use inside WalletAccountCard. */
   embedded?: boolean;
 };
 
@@ -431,7 +431,7 @@ export function WithdrawTestPanel({
           <div className="space-y-2.5 text-sm text-[#9CA3AF]">
             <p className="text-xs leading-relaxed text-[#6B7280]">
               {withdrawalPreview.feeMode === "charged_separately"
-                ? "Fee charged on top — you receive the full amount below."
+                ? "Fee charged on top, you receive the full amount below."
                 : "Fee deducted from this withdrawal."}
             </p>
             <div className="flex justify-between gap-4">
@@ -467,7 +467,7 @@ export function WithdrawTestPanel({
           {withdrawalSuccess.duplicate ? "Already submitted. " : ""}
           {withdrawalSuccess.duplicate ? (
             <>
-              {formatMinorAsGbp(withdrawalSuccess.netMinor)} to your bank — wallet unchanged (
+              {formatMinorAsGbp(withdrawalSuccess.netMinor)} to your bank, wallet unchanged (
               {formatMinorAsGbp(withdrawalSuccess.requestedMinor)} requested, fee{" "}
               {formatMinorAsGbp(withdrawalSuccess.feeMinor)}).
             </>

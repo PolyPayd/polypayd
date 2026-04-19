@@ -83,7 +83,7 @@ export function BulkSendPreviewSteps({ step, setStep, batchName, currency, rows,
       <FintechCard interactive={false}>
         <h2 className="text-lg font-semibold tracking-tight text-[#F9FAFB] sm:text-xl">Upload CSV</h2>
         <p className="mt-1 text-sm text-[#6B7280]">
-          Add a file with recipient_name, account_number, sort_code, and amount — or try the demo dataset.
+          Add a file with recipient_name, account_number, sort_code, and amount, or try the demo dataset.
         </p>
 
         <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={onFileChange} />
@@ -154,9 +154,9 @@ export function BulkSendPreviewSteps({ step, setStep, batchName, currency, rows,
             <tbody className="text-[#E5E7EB]">
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-white/[0.06]">
-                  <td className="py-3 pr-4 font-medium text-[#F9FAFB]">{r.recipient_name || "—"}</td>
-                  <td className="py-3 pr-4 tabular-nums">{r.account_number || "—"}</td>
-                  <td className="py-3 pr-4 tabular-nums">{r.sort_code || "—"}</td>
+                  <td className="py-3 pr-4 font-medium text-[#F9FAFB]">{r.recipient_name || "-"}</td>
+                  <td className="py-3 pr-4 tabular-nums">{r.account_number || "-"}</td>
+                  <td className="py-3 pr-4 tabular-nums">{r.sort_code || "-"}</td>
                   <td className="py-3 pr-4 tabular-nums">{formatMoney(r.amount, currency)}</td>
                   <td className="py-3">
                     <span
@@ -182,7 +182,7 @@ export function BulkSendPreviewSteps({ step, setStep, batchName, currency, rows,
               className="rounded-2xl border border-white/[0.08] bg-[#0B0F14]/55 px-4 py-3 text-sm"
             >
               <div className="flex items-start justify-between gap-3">
-                <p className="font-semibold text-[#F9FAFB]">{r.recipient_name || "—"}</p>
+                <p className="font-semibold text-[#F9FAFB]">{r.recipient_name || "-"}</p>
                 <span
                   className={
                     r.status === "Valid"
@@ -196,11 +196,11 @@ export function BulkSendPreviewSteps({ step, setStep, batchName, currency, rows,
               <dl className="mt-3 space-y-2 text-[#9CA3AF]">
                 <div className="flex justify-between gap-4">
                   <dt>Account</dt>
-                  <dd className="tabular-nums text-[#E5E7EB]">{r.account_number || "—"}</dd>
+                  <dd className="tabular-nums text-[#E5E7EB]">{r.account_number || "-"}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt>Sort code</dt>
-                  <dd className="tabular-nums text-[#E5E7EB]">{r.sort_code || "—"}</dd>
+                  <dd className="tabular-nums text-[#E5E7EB]">{r.sort_code || "-"}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt>Amount</dt>
@@ -239,7 +239,7 @@ export function BulkSendPreviewSteps({ step, setStep, batchName, currency, rows,
       <dl className="mt-8 space-y-4 text-sm">
         <div className="flex justify-between gap-4">
           <dt className="text-[#6B7280]">Batch name</dt>
-          <dd className="max-w-[60%] text-right font-medium text-[#F9FAFB]">{batchName || "—"}</dd>
+          <dd className="max-w-[60%] text-right font-medium text-[#F9FAFB]">{batchName || "-"}</dd>
         </div>
         <div className="flex justify-between gap-4">
           <dt className="text-[#6B7280]">Currency</dt>
@@ -271,7 +271,7 @@ export function BulkSendPreviewSteps({ step, setStep, batchName, currency, rows,
             variant="ghost"
             className="min-h-12 w-full sm:w-auto"
             onClick={() => {
-              toast.message("Thanks — we will let you know when Bulk Send is live.", {
+              toast.message("Thanks, we will let you know when Bulk Send is live.", {
                 description: "Claim Link payouts are available today from New payout.",
               });
             }}

@@ -82,7 +82,7 @@ export function BatchActivityExpandable({ events, viewerUserId, actorProfiles }:
                         </div>
                       </>
                     ) : (
-                      "—"
+                      "-"
                     )}
                   </td>
                   <td className="px-4 py-4">

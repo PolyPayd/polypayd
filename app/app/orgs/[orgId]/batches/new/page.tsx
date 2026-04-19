@@ -41,7 +41,7 @@ export default async function NewBatchPage({ params }: { params: Params }) {
         Back to payouts
       </Link>
       <h1 className="text-xl font-semibold text-[#F9FAFB] sm:text-2xl">New payout</h1>
-      <p className="mt-2 text-sm text-[#6B7280]">Set up in a few steps—recipients and amounts come next.</p>
+      <p className="mt-2 text-sm text-[#6B7280]">Set up in a few steps, recipients and amounts come next.</p>
       <div className="mt-8">
         <CreateBatchForm
           orgId={orgId}

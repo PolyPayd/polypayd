@@ -198,7 +198,7 @@ export default async function WalletPage({
         </div>
       </FintechCard>
 
-      {/* Activity — expand/collapse in place (client) */}
+      {/* Activity, expand/collapse in place (client) */}
       <FintechCard interactive={false}>
         <h2 className="text-lg font-semibold tracking-tight text-[#F9FAFB]">Activity</h2>
         <p className="mt-1 text-sm text-[#6B7280]">Recent credits and debits</p>

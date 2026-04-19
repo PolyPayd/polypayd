@@ -1,5 +1,5 @@
 /**
- * User-facing copy and sanitization for batch funding — never expose raw DB/RPC internals.
+ * User-facing copy and sanitization for batch funding, never expose raw DB/RPC internals.
  */
 
 export const BATCH_FUND_TRY_AGAIN = "Something went wrong, please try again.";

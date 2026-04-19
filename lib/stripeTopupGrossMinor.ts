@@ -1,7 +1,7 @@
 /**
  * Gross customer charge for wallet top-up validation against metadata `total_charge_minor`.
  * On Connect direct charges, `amount_received` often reflects net-to-connected (after Stripe fees),
- * not the gross charge — use `amount` for succeeded PaymentIntents.
+ * not the gross charge, use `amount` for succeeded PaymentIntents.
  */
 export function stripeTopupGrossMinorForValidation(pi: {
   status: string;

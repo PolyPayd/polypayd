@@ -122,7 +122,7 @@ export async function fetchWalletRecentTransactionRows(
     const txn = row.ledger_transactions;
     const entryRef = typeof row.reference_type === "string" ? row.reference_type : null;
     const parentRef = typeof txn?.reference_type === "string" ? txn.reference_type : null;
-    const refType = entryRef ?? parentRef ?? "—";
+    const refType = entryRef ?? parentRef ?? "-";
 
     if (refType === "wallet_funding_release") {
       continue;
@@ -184,7 +184,7 @@ export async function fetchWalletRecentTransactionRows(
       typeLabel: mapLedgerReferenceType(refType),
       statusLabel: null,
       statusVariant: null,
-      entry_type: row.entry_type ?? "—",
+      entry_type: row.entry_type ?? "-",
       amount: num(row.amount),
     });
   }

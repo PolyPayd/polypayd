@@ -101,7 +101,7 @@ export default async function ImpactPage() {
                         <span className={statusPill(d.status)}>{d.status}</span>
                       </td>
                       <td className="py-3.5 text-[#6B7280]">
-                        {d.createdAt ? new Date(d.createdAt).toLocaleDateString("en-GB") : "—"}
+                        {d.createdAt ? new Date(d.createdAt).toLocaleDateString("en-GB") : "-"}
                       </td>
                     </tr>
                   ))}

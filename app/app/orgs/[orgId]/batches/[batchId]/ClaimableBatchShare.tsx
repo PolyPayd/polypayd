@@ -11,7 +11,7 @@ type Props = {
   storedBatchCode: string;
   /** From `getPublicSiteUrl()`; when empty, the client fills the origin after mount. */
   publicSiteUrl: string;
-  /** Omit outer card — use inside a parent surface */
+  /** Omit outer card, use inside a parent surface */
   embedded?: boolean;
 };
 

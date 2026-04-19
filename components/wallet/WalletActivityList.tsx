@@ -50,7 +50,7 @@ export function WalletActivityList({ rows, currency = "GBP", className = "" }: P
                 <FintechBadge tone={statusTone(r.statusVariant)}>{r.statusLabel}</FintechBadge>
               ) : null}
               <span className="text-xs text-[#6B7280]">
-                {r.date ? new Date(r.date).toLocaleString("en-GB") : "—"}
+                {r.date ? new Date(r.date).toLocaleString("en-GB") : "-"}
               </span>
             </div>
           </div>

@@ -93,7 +93,7 @@ export default async function ClaimPage({ params }: { params: Params }) {
             <dl className="mt-6 space-y-5 text-sm">
               <div>
                 <dt className="text-xs font-medium text-[#6B7280]">Name</dt>
-                <dd className="mt-1 font-medium text-[#F9FAFB]">{batch.name ?? "—"}</dd>
+                <dd className="mt-1 font-medium text-[#F9FAFB]">{batch.name ?? "-"}</dd>
               </div>
               <div>
                 <dt className="text-xs font-medium text-[#6B7280]">Pool</dt>

@@ -376,8 +376,8 @@ export function ProfileDashboard({
 
       {accountType === "business" ? (
         <ProfileSection title="Business">
-          <ProfileRow variant="static" label="Business name" value={businessName || "—"} valueTone={businessName ? "default" : "muted"} />
-          <ProfileRow variant="static" label="Registration ID" value={businessId || "—"} valueTone={businessId ? "default" : "muted"} />
+          <ProfileRow variant="static" label="Business name" value={businessName || "-"} valueTone={businessName ? "default" : "muted"} />
+          <ProfileRow variant="static" label="Registration ID" value={businessId || "-"} valueTone={businessId ? "default" : "muted"} />
         </ProfileSection>
       ) : null}
 

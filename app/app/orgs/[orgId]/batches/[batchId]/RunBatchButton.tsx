@@ -35,7 +35,7 @@ export function RunBatchButton({ orgId, batchId, pendingTotal, pendingCount, dis
       >
         {loading
           ? "Sending…"
-          : `Pay ${moneyGBP(totalPay)} — send ${moneyGBP(pendingTotal)} to ${pendingCount} recipient${pendingCount === 1 ? "" : "s"}`}
+          : `Pay ${moneyGBP(totalPay)} and send ${moneyGBP(pendingTotal)} to ${pendingCount} recipient${pendingCount === 1 ? "" : "s"}`}
       </button>
     </div>
   );

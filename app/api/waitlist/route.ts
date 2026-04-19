@@ -39,7 +39,7 @@ function buildHtmlBody(fields: { fullName: string; email: string; company: strin
 <body style="margin:0;padding:24px;background:#f9fafb;">
   <table role="presentation" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;border-collapse:collapse;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;width:100%;">
     <tr>
-      <td colspan="2" style="padding:20px 24px;background:#0f172a;color:#f8fafc;font-family:system-ui,-apple-system,sans-serif;font-size:16px;font-weight:600;">PolyPayd — waitlist enquiry</td>
+      <td colspan="2" style="padding:20px 24px;background:#0f172a;color:#f8fafc;font-family:system-ui,-apple-system,sans-serif;font-size:16px;font-weight:600;">PolyPayd: waitlist enquiry</td>
     </tr>
     ${row("Full name", fields.fullName)}
     ${row("Email", fields.email)}

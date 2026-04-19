@@ -98,7 +98,7 @@ export function LandingWaitlistForm({ id = "contact" }: { id?: string }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h3 className="mt-6 text-xl font-semibold text-[#F9FAFB]">Thanks — your enquiry has been received.</h3>
+        <h3 className="mt-6 text-xl font-semibold text-[#F9FAFB]">Thanks, your enquiry has been received.</h3>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[#9CA3AF]">
           We&apos;ll review your submission and follow up shortly from{" "}
           <a href="mailto:founder@polypayd.co.uk" className="font-medium text-[#3B82F6] hover:underline">
@@ -127,7 +127,7 @@ export function LandingWaitlistForm({ id = "contact" }: { id?: string }) {
         <div className="border-b border-white/[0.06] pb-8">
           <h2 className="text-2xl font-semibold tracking-tight text-[#F9FAFB] sm:text-[1.65rem]">Request access or get in touch</h2>
           <p className="mt-3 max-w-xl text-sm leading-relaxed text-[#9CA3AF] sm:text-[15px]">
-            Share a few details. We read every submission — especially from operators, finance, and payment
+            Share a few details. We read every submission, especially from operators, finance, and payment
             partners evaluating PolyPayd for production use.
           </p>
         </div>
@@ -243,7 +243,7 @@ export function LandingWaitlistForm({ id = "contact" }: { id?: string }) {
 
         <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs leading-relaxed text-[#6B7280]">
-            By submitting, you agree we may contact you about PolyPayd. No marketing lists — operational and
+            By submitting, you agree we may contact you about PolyPayd. No marketing lists. Operational and
             partner conversations only.
           </p>
           <button

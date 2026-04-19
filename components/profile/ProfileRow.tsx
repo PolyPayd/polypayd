@@ -35,7 +35,7 @@ function RowBody({ label, value, valueTone }: { label: string; value: string; va
     <div className="min-w-0 flex-1 pr-1">
       <span className="block text-[11px] font-medium uppercase tracking-[0.06em] text-[#6B7280]">{label}</span>
       <span className={cn("mt-1 block leading-snug", value === "" ? "text-[#6B7280]" : valueClass)}>
-        {value || "—"}
+        {value || "-"}
       </span>
     </div>
   );

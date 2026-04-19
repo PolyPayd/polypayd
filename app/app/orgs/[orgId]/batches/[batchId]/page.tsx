@@ -112,7 +112,7 @@ export default async function BatchDetailsPage({
   const statusFilter = (sp.status ?? "all").toLowerCase();
   const supabase = supabaseAdmin();
 
-  // 1) Batch — base columns only so page loads when extended claimable columns are missing
+  // 1) Batch, base columns only so page loads when extended claimable columns are missing
   const baseBatchSelect = "id, org_id, name, status, currency, total_amount, recipient_count, created_at, batch_type, batch_code, expires_at, max_claims";
   const { data: batchBase, error: batchErr } = await supabase
     .from("batches")
@@ -690,7 +690,7 @@ export default async function BatchDetailsPage({
               <div className="text-neutral-400">Latest Upload</div>
               {latestUpload ? (
                 <div className="mt-2 space-y-1">
-                  <div className="font-medium text-neutral-200">{latestUpload.original_filename ?? "—"}</div>
+                  <div className="font-medium text-neutral-200">{latestUpload.original_filename ?? "-"}</div>
                   <div className="text-neutral-400">
                     Rows: <span className="text-neutral-200">{latestUpload.row_count ?? 0}</span>
                   </div>
@@ -713,7 +713,7 @@ export default async function BatchDetailsPage({
         </div>
       </div>
 
-      {/* Stats — bulk send only */}
+      {/* Stats, bulk send only */}
       {!isClaimable ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
           <div className="rounded-xl border border-neutral-800 p-4">
@@ -727,7 +727,7 @@ export default async function BatchDetailsPage({
           <div className="rounded-xl border border-neutral-800 p-4">
             <div className="text-sm text-neutral-400">Created</div>
             <div className="text-base font-medium">
-              {batch.created_at ? new Date(batch.created_at).toLocaleString("en-GB") : "—"}
+              {batch.created_at ? new Date(batch.created_at).toLocaleString("en-GB") : "-"}
             </div>
           </div>
         </div>
@@ -855,7 +855,7 @@ export default async function BatchDetailsPage({
             </div>
             <div className="flex flex-wrap items-baseline justify-between gap-2 py-3">
               <dt className="text-xs font-medium text-[#6B7280]">Recipient cap</dt>
-              <dd className="font-semibold tabular-nums text-[#F9FAFB]">{batch.max_claims ?? "—"}</dd>
+              <dd className="font-semibold tabular-nums text-[#F9FAFB]">{batch.max_claims ?? "-"}</dd>
             </div>
             {(() => {
               const amounts = claimableClaims.map((c) => c.claim_amount);
@@ -982,7 +982,7 @@ export default async function BatchDetailsPage({
                                 ) : null}
                               </div>
                             ) : (
-                              "—"
+                              "-"
                             )}
                           </td>
                         </tr>
@@ -1383,14 +1383,14 @@ export default async function BatchDetailsPage({
               <tbody>
                 {items.map((it) => (
                   <tr key={it.id} className="border-t border-neutral-800">
-                    <td className="p-3">{it.recipient_name ?? "—"}</td>
-                    <td className="p-3 font-mono text-xs">{it.account_identifier ?? "—"}</td>
+                    <td className="p-3">{it.recipient_name ?? "-"}</td>
+                    <td className="p-3 font-mono text-xs">{it.account_identifier ?? "-"}</td>
                     <td className="p-3">{moneyGBP(it.amount)}</td>
-                    <td className="p-3">{it.reference ?? "—"}</td>
+                    <td className="p-3">{it.reference ?? "-"}</td>
                     <td className="p-3">
-                      <span className={statusBadge(it.status)}>{it.status ?? "—"}</span>
+                      <span className={statusBadge(it.status)}>{it.status ?? "-"}</span>
                     </td>
-                    <td className="p-3 text-red-300">{it.failure_reason ?? "—"}</td>
+                    <td className="p-3 text-red-300">{it.failure_reason ?? "-"}</td>
                   </tr>
                 ))}
 
@@ -1441,14 +1441,14 @@ export default async function BatchDetailsPage({
                 {(uploads ?? []).map((u) => (
                   <tr key={u.id} className="border-t border-neutral-800">
                     <td className="p-3">
-                      {u.created_at ? new Date(u.created_at).toLocaleString("en-GB") : "—"}
+                      {u.created_at ? new Date(u.created_at).toLocaleString("en-GB") : "-"}
                     </td>
-                    <td className="p-3 font-medium">{u.original_filename ?? "—"}</td>
+                    <td className="p-3 font-medium">{u.original_filename ?? "-"}</td>
                     <td className="p-3">{u.row_count ?? 0}</td>
                     <td className="p-3">{u.valid_count ?? 0}</td>
                     <td className="p-3">{u.invalid_count ?? 0}</td>
                     <td className="p-3 font-mono text-xs max-w-[420px] truncate" title={u.file_hash ?? ""}>
-                      {u.file_hash ?? "—"}
+                      {u.file_hash ?? "-"}
                     </td>
                     <td className="p-3">
                       <a
@@ -1501,7 +1501,7 @@ export default async function BatchDetailsPage({
                 <option value="">Select an upload</option>
                 {(uploads ?? []).map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.created_at ? new Date(u.created_at).toLocaleString("en-GB") : "—"} · {u.original_filename ?? "—"}
+                    {u.created_at ? new Date(u.created_at).toLocaleString("en-GB") : "-"} · {u.original_filename ?? "-"}
                     {u.invalid_count ? ` · invalid:${u.invalid_count}` : ""}
                   </option>
                 ))}
@@ -1524,9 +1524,9 @@ export default async function BatchDetailsPage({
               <tbody>
                 {(uploadErrors ?? []).map((e) => (
                   <tr key={e.id} className="border-t border-neutral-800">
-                    <td className="p-3">{e.row_number ?? "—"}</td>
-                    <td className="p-3 font-mono text-xs">{e.field ?? "—"}</td>
-                    <td className="p-3 text-red-300">{e.message ?? "—"}</td>
+                    <td className="p-3">{e.row_number ?? "-"}</td>
+                    <td className="p-3 font-mono text-xs">{e.field ?? "-"}</td>
+                    <td className="p-3 text-red-300">{e.message ?? "-"}</td>
                   </tr>
                 ))}
 

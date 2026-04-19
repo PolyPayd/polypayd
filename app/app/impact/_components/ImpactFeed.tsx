@@ -43,7 +43,7 @@ export function ImpactFeed({ items, currency }: Props) {
                       {impactReferenceLabel(row.referenceType)}
                     </div>
                     <div className="text-xs leading-tight text-[#6B7280]">
-                      {row.createdAt ? new Date(row.createdAt).toLocaleString("en-GB") : "—"}
+                      {row.createdAt ? new Date(row.createdAt).toLocaleString("en-GB") : "-"}
                     </div>
                   </div>
                   <div className="text-right">

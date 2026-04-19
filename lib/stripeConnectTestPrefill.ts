@@ -9,7 +9,7 @@ export function isStripeSecretKeyTestMode(secretKey: string | undefined): boolea
  * Test-mode-only Account:create extras. Magic tokens from Stripe’s Connect testing guide:
  * https://docs.stripe.com/connect/testing
  *
- * Do not use with live keys — live onboarding must collect real data from the user.
+ * Do not use with live keys, live onboarding must collect real data from the user.
  */
 export function getStripeConnectTestCreatePrefill(opts: {
   individualEmail?: string | null;
@@ -19,7 +19,7 @@ export function getStripeConnectTestCreatePrefill(opts: {
     business_profile: {
       name: "Test seller (dev)",
       url: "https://accessible.stripe.com",
-      product_description: "Local development — test Connect onboarding",
+      product_description: "Local development, test Connect onboarding",
       support_phone: "0000000000",
     },
     individual: {

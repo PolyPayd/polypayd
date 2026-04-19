@@ -87,5 +87,5 @@ export function formatRecipientLifecycleLabel(status: string | null | undefined)
     failed: "Failed",
     cancelled: "Cancelled",
   };
-  return map[s] ?? (status ? status.replace(/_/g, " ") : "—");
+  return map[s] ?? (status ? status.replace(/_/g, " ") : "-");
 }

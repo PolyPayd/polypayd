@@ -1,4 +1,4 @@
--- LIVE SUPABASE — fixes: no unique constraint matching ON CONFLICT (batch_item_id, status)
+-- LIVE SUPABASE: fixes: no unique constraint matching ON CONFLICT (batch_item_id, status)
 -- Paste in SQL Editor. Requires public.batch_items.
 --
 -- Adds batch_item_id (nullable) + partial unique index on (batch_item_id, status).

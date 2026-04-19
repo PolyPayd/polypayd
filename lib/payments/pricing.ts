@@ -20,7 +20,7 @@ export const WITHDRAWAL_FEE_MIN_MINOR = 30;
 
 export type TopupChargeBreakdown = {
   walletCreditMinor: number;
-  /** @deprecated Use {@link stripeCostEstimateMinor} — this is the Stripe/card cost uplift only, not platform revenue. */
+  /** @deprecated Use {@link stripeCostEstimateMinor}, this is the Stripe/card cost uplift only, not platform revenue. */
   processingFeeMinor: number;
   /** PolyPayd platform revenue on top-up (currently zero; batch fees are separate). */
   platformFeeMinor: number;
@@ -167,7 +167,7 @@ export function resolveWithdrawalPricing(
 
 /**
  * Same as {@link resolveWithdrawalPricing} but converts wallet `current_balance` (decimal GBP) here so
- * API routes only import this — avoids rare bundler/runtime issues with a separate `gbpToMinor` import.
+ * API routes only import this, avoids rare bundler/runtime issues with a separate `gbpToMinor` import.
  */
 export function resolveWithdrawalPricingFromWalletGbp(
   withdrawalRequestedMinor: number,

@@ -4,9 +4,9 @@
  */
 
 export function formatExpiryDateTime(expiresAt: string | null | undefined): string {
-  if (!expiresAt) return "—";
+  if (!expiresAt) return "-";
   const d = new Date(expiresAt);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "-";
   return d.toLocaleString("en-GB", {
     day: "numeric",
     month: "short",

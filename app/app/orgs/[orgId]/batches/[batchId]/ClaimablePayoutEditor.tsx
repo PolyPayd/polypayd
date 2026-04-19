@@ -282,7 +282,7 @@ export function ClaimablePayoutEditor({ claims, totalPool, currency = "GBP", can
       </div>
       {canEdit && (
         <p className="text-xs text-neutral-500 leading-relaxed">
-          Lock allocations saves these amounts and prevents further edits—you don&apos;t need Save first.
+          Lock allocations saves these amounts and prevents further edits, you don&apos;t need Save first.
         </p>
       )}
       {lockState?.error && <p className="text-sm text-red-400">{lockState.error}</p>}

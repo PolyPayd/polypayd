@@ -1,5 +1,5 @@
 /**
- * Rules for wallet dashboard totals (ledger-backed, full history — not a recent-rows window).
+ * Rules for wallet dashboard totals (ledger-backed, full history, not a recent-rows window).
  *
  * Total funded: intended top-up credits only (`wallet_funding` at PI success; pending→available via release queue).
  * Total from internal claims: `claim_completed` credits (batch funded internally; lands in current_balance).

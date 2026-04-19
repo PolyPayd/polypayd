@@ -31,7 +31,7 @@ export async function fetchClerkRecipientProfiles(
           primaryEmail,
         });
       } catch {
-        /* missing user or Clerk misconfig — fall back to masking in UI */
+        /* missing user or Clerk misconfig, fall back to masking in UI */
       }
     })
   );
