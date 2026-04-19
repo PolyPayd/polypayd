@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { LandingWaitlistForm } from "@/components/marketing/LandingWaitlistForm";
@@ -91,30 +92,38 @@ function SurfaceCard({
 }
 
 function ProductShot({
-  label,
-  hint,
+  src,
+  alt,
   aspectClassName = "aspect-[16/10] sm:aspect-[2/1]",
   className = "",
+  priority = false,
 }: {
-  label: string;
-  hint: string;
+  src: string;
+  alt: string;
   aspectClassName?: string;
   className?: string;
+  priority?: boolean;
 }) {
   return (
     <div
-      className={`group relative overflow-hidden rounded-[1.15rem] border border-white/[0.08] bg-[#121821] shadow-[0_28px_72px_-28px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.04)_inset] transition-[border-color,box-shadow] duration-500 hover:border-white/[0.12] ${className}`}
+      className={`group relative overflow-hidden rounded-[1.15rem] border border-white/[0.08] bg-[#0B0F14] shadow-[0_28px_72px_-28px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.04)_inset] transition-[border-color,box-shadow] duration-500 ease-out hover:border-white/[0.12] hover:shadow-[0_32px_76px_-26px_rgba(0,0,0,0.88),0_0_0_1px_rgba(255,255,255,0.06)_inset] ${className}`}
     >
-      <div className="absolute inset-0 bg-[linear-gradient(145deg,rgba(59,130,246,0.05)_0%,transparent_45%)]" aria-hidden />
-      <div className={`w-full bg-gradient-to-br from-[#1a2433] via-[#121821] to-[#0B0F14] ${aspectClassName}`} />
-      <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center sm:p-10">
-        <span className="rounded-full border border-white/[0.08] bg-[#0B0F14]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#6B7280] backdrop-blur-sm">
-          Placeholder
-        </span>
-        <p className="mt-4 text-sm font-medium text-[#9CA3AF] sm:text-base">{label}</p>
-        <p className="mt-2 max-w-sm text-xs leading-relaxed text-[#6B7280] sm:text-[13px]">{hint}</p>
+      <div
+        className={`relative w-full origin-center transition-transform duration-500 ease-out group-hover:scale-[1.02] ${aspectClassName}`}
+      >
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          priority={priority}
+          sizes="(max-width: 640px) 100vw, (max-width: 1280px) min(100vw, 1024px), 1152px"
+          className="object-contain object-center"
+        />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0B0F14]/50 to-transparent"
+          aria-hidden
+        />
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#0B0F14]/85 to-transparent opacity-70" aria-hidden />
     </div>
   );
 }
@@ -184,9 +193,10 @@ export default function HomePage() {
 
           <div className="mx-auto mt-10 max-w-6xl sm:mt-12">
             <ProductShot
-              label="Console overview"
-              hint="Replace with dashboard screenshot: wallet, batch list, and funding status."
+              src="/images/console-overview.png"
+              alt="PolyPayd console overview: wallet, batch list, and funding status"
               aspectClassName="aspect-[4/3] sm:aspect-[16/9]"
+              priority
             />
           </div>
         </section>
@@ -220,8 +230,8 @@ export default function HomePage() {
               </div>
               <div className="mt-12 lg:mt-0">
                 <ProductShot
-                  label="Business / ops view"
-                  hint="Screenshot: org wallet, batch pipeline, or role-appropriate summary."
+                  src="/images/business-ops.png"
+                  alt="PolyPayd business and operations view: org wallet and batch pipeline"
                   aspectClassName="aspect-[4/3] sm:aspect-[3/2]"
                 />
               </div>
@@ -237,8 +247,8 @@ export default function HomePage() {
             <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-14 xl:gap-20">
               <div className="order-2 mt-12 lg:order-1 lg:mt-0">
                 <ProductShot
-                  label="Recipient / individual flow"
-                  hint="Screenshot: claim path, wallet credit, or clear balance after a payout event."
+                  src="/images/recipient-flow.png"
+                  alt="PolyPayd recipient flow: claim path and wallet balance"
                   aspectClassName="aspect-[4/3] sm:aspect-[3/2]"
                 />
               </div>
@@ -295,8 +305,8 @@ export default function HomePage() {
             </div>
             <div className="mx-auto mt-10 max-w-4xl lg:mt-12">
               <ProductShot
-                label="Batch & funding"
-                hint="Screenshot: batch detail, CSV or row view, or fund confirmation step."
+                src="/images/batch-funding.png"
+                alt="PolyPayd batch and funding: batch detail and fund confirmation"
                 aspectClassName="aspect-[16/11] sm:aspect-[16/9]"
               />
             </div>
@@ -333,8 +343,8 @@ export default function HomePage() {
               </div>
               <div className="mt-12 lg:mt-0">
                 <ProductShot
-                  label="Activity & audit"
-                  hint="Screenshot: transaction list, filters, or export-friendly activity view."
+                  src="/images/activity-audit.png"
+                  alt="PolyPayd activity and audit: transaction list and wallet activity"
                   aspectClassName="aspect-[4/3] sm:aspect-[3/2]"
                 />
               </div>
