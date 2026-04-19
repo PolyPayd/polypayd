@@ -11,6 +11,7 @@ export function LandingWaitlistForm({ id = "contact" }: { id?: string }) {
   const [company, setCompany] = useState("");
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "submitting" | "success">("idle");
 
   const validate = useCallback((): boolean => {
@@ -31,15 +32,55 @@ export function LandingWaitlistForm({ id = "contact" }: { id?: string }) {
 
     setStatus("submitting");
     setErrors({});
+    setSubmitError(null);
 
-    // Placeholder: replace with POST /api/waitlist or your CRM webhook.
-    await new Promise((r) => setTimeout(r, 900));
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          fullName: fullName.trim(),
+          email: email.trim(),
+          company: company.trim(),
+          message: message.trim(),
+        }),
+      });
 
-    setStatus("success");
-    setFullName("");
-    setEmail("");
-    setCompany("");
-    setMessage("");
+      const json = (await res.json()) as { ok?: boolean; error?: string; fields?: Record<string, string> };
+
+      if (!res.ok) {
+        let hasFieldErrors = false;
+        if (json.fields && typeof json.fields === "object") {
+          const next: FieldErrors = {};
+          for (const k of ["fullName", "email", "company", "message"] as const) {
+            const v = json.fields[k];
+            if (typeof v === "string" && v) next[k] = v;
+          }
+          if (Object.keys(next).length > 0) {
+            setErrors(next);
+            hasFieldErrors = true;
+          }
+        }
+        setSubmitError(
+          hasFieldErrors
+            ? null
+            : typeof json.error === "string"
+              ? json.error
+              : "Something went wrong. Please try again."
+        );
+        setStatus("idle");
+        return;
+      }
+
+      setStatus("success");
+      setFullName("");
+      setEmail("");
+      setCompany("");
+      setMessage("");
+    } catch {
+      setSubmitError("Network error. Check your connection and try again.");
+      setStatus("idle");
+    }
   }
 
   const inputClass =
@@ -59,12 +100,11 @@ export function LandingWaitlistForm({ id = "contact" }: { id?: string }) {
         </div>
         <h3 className="mt-6 text-xl font-semibold text-[#F9FAFB]">Thanks — we&apos;ve got your note</h3>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[#9CA3AF]">
-          This is a demo submit for now. Wire this form to your API or CRM when you&apos;re ready. We&apos;ll review
-          real enquiries at{" "}
-          <a href="mailto:hello@polypayd.com" className="font-medium text-[#3B82F6] hover:underline">
-            hello@polypayd.com
-          </a>
-          .
+          We&apos;ll review your enquiry and reply from{" "}
+          <a href="mailto:hello@mail.polypayd.co.uk" className="font-medium text-[#3B82F6] hover:underline">
+            hello@mail.polypayd.co.uk
+          </a>{" "}
+          when we can.
         </p>
         <button
           type="button"
@@ -194,6 +234,12 @@ export function LandingWaitlistForm({ id = "contact" }: { id?: string }) {
             ) : null}
           </div>
         </div>
+
+        {submitError ? (
+          <p className="mb-6 rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-300" role="alert">
+            {submitError}
+          </p>
+        ) : null}
 
         <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs leading-relaxed text-[#6B7280]">

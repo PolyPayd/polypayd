@@ -20,6 +20,9 @@ const isPublicRoute = createRouteMatcher([
 
   "/api/webhooks/clerk",
 
+  // Public marketing waitlist (validated + rate-limit at edge/host if needed)
+  "/api/waitlist",
+
   // Admin-only manual RPC trigger (guarded by POLYPAYD_ADMIN_RELEASE_SECRET on the route)
   "/api/internal/stripe/balance-available-release",
 ]);
