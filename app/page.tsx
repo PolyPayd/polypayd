@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     "PolyPayd is payout software for teams that fund batches, move money through wallets, and need recipients to claim with clarity — built for businesses, individuals, and partner-grade audit trails.",
 };
 
-const MAIL = "mailto:hello@polypayd.com";
+const MAIL = "mailto:founder@polypayd.co.uk";
 
 function SectionDivider() {
   return (
@@ -64,17 +64,6 @@ function PrimaryCta({
         className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/0 via-white/[0.07] to-white/0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
         aria-hidden
       />
-    </a>
-  );
-}
-
-function SecondaryCta({ href, children, className = "" }: { href: string; children: ReactNode; className?: string }) {
-  return (
-    <a
-      href={href}
-      className={`inline-flex min-h-[48px] items-center justify-center rounded-xl border border-white/[0.1] bg-[#121821]/90 px-7 text-sm font-semibold text-[#F9FAFB] shadow-sm shadow-black/25 backdrop-blur-sm transition-all duration-200 hover:border-white/[0.18] hover:bg-[#161F2B] hover:shadow-md active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3B82F6]/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0F14] ${className}`}
-    >
-      {children}
     </a>
   );
 }
@@ -185,9 +174,6 @@ export default function HomePage() {
               <PrimaryCta id="early-access" href="#contact" className="w-full sm:w-auto sm:min-w-[200px]">
                 Request access
               </PrimaryCta>
-              <SecondaryCta href={`${MAIL}?subject=${encodeURIComponent("PolyPayd — partner enquiry")}`} className="w-full sm:w-auto sm:min-w-[200px]">
-                Email us
-              </SecondaryCta>
             </div>
           </div>
 
@@ -584,12 +570,6 @@ export default function HomePage() {
                   <PrimaryCta href="#contact" className="w-full sm:w-auto">
                     Request access
                   </PrimaryCta>
-                  <SecondaryCta
-                    href={`${MAIL}?subject=${encodeURIComponent("PolyPayd — partner / technical discussion")}`}
-                    className="w-full border-white/[0.12] bg-transparent sm:w-auto hover:bg-white/[0.04]"
-                  >
-                    Partner enquiry
-                  </SecondaryCta>
                 </div>
                 <p className="mx-auto mt-8 max-w-lg text-xs leading-relaxed text-[#6B7280]">
                   Direct line:{" "}
@@ -597,7 +577,7 @@ export default function HomePage() {
                     href={MAIL}
                     className="font-medium text-[#9CA3AF] underline decoration-white/15 underline-offset-[5px] transition-colors hover:text-[#F9FAFB]"
                   >
-                    hello@polypayd.com
+                    founder@polypayd.co.uk
                   </a>
                 </p>
               </div>
