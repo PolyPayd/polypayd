@@ -345,12 +345,6 @@ export default function HomePage() {
             <a href="#waitlist" className="text-xs font-medium text-[#9CA3AF] transition-colors hover:text-[#F9FAFB]">
               Waitlist
             </a>
-            <Link
-              href="/platforms"
-              className="text-xs font-medium text-[#6B7280] transition-colors hover:text-[#9CA3AF]"
-            >
-              For platforms and agencies &rarr;
-            </Link>
           </div>
         </div>
       </footer>

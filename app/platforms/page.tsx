@@ -9,6 +9,10 @@ export const metadata: Metadata = {
   description:
     "PolyPayd is payout software for teams that fund batches, move money through wallets, and need recipients to claim with clarity, built for businesses, platforms, and partner-grade audit trails.",
   alternates: { canonical: "/platforms" },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 const MAIL = "mailto:founder@polypayd.co.uk";
