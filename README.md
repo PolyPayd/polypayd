@@ -24,7 +24,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ### `ALLOWED_APP_EMAILS` (required for `/app` access)
 
-`middleware.ts` gates the founder-only prototype at `/app` (and every sub-route) to a comma-separated allowlist of Clerk account emails. Anyone signed out, or signed in with any other email, is redirected to `/coming-soon`.
+`proxy.ts` (Next.js 16's replacement for `middleware.ts`) gates the founder-only prototype at `/app` (and every sub-route) to a comma-separated allowlist of Clerk account emails. Anyone signed out, or signed in with any other email, is redirected to `/coming-soon`.
 
 Set this in **Vercel → Project → Settings → Environment Variables** for each environment (Production, Preview, Development):
 
