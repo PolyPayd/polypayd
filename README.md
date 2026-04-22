@@ -34,7 +34,7 @@ ALLOWED_APP_EMAILS=founder@example.com,other@example.com
 
 Emails are matched case-insensitively and compared against the user's primary Clerk email. Leave the variable unset (or empty) to lock `/app` to nobody.
 
-The rest of the site (`/`, `/groups`, `/coming-soon`, `/sign-in`, `/api/waitlist`, Stripe webhook, etc.) remains fully public regardless of this variable.
+The rest of the site (`/`, `/platforms`, `/groups` (301 → `/`), `/coming-soon`, `/sign-in`, `/api/waitlist`, Stripe webhook, etc.) remains fully public regardless of this variable.
 
 ## Learn More
 

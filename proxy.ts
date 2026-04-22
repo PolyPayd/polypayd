@@ -13,6 +13,7 @@ const isAppRoute = createRouteMatcher(["/app", "/app/(.*)"]);
 const isPublicRoute = createRouteMatcher([
   // Marketing
   "/",
+  "/platforms",
   "/groups",
   "/coming-soon",
 

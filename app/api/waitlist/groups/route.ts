@@ -63,7 +63,7 @@ function buildHtmlBody(fields: {
     ${row("How they'd use it", fields.useCase)}
     ${row("Payout frequency", fields.frequencyLabel)}
   </table>
-  <p style="max-width:560px;margin:16px auto 0;font-family:system-ui,-apple-system,sans-serif;font-size:12px;color:#9ca3af;text-align:center;">Submitted via polypayd.co.uk/groups</p>
+  <p style="max-width:560px;margin:16px auto 0;font-family:system-ui,-apple-system,sans-serif;font-size:12px;color:#9ca3af;text-align:center;">Submitted via polypayd.co.uk</p>
 </body>
 </html>`;
 }
