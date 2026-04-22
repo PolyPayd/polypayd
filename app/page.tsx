@@ -154,12 +154,6 @@ export default function HomePage() {
             <a href="#contact" className="text-sm font-medium text-[#9CA3AF] transition-colors hover:text-[#F9FAFB]">
               Contact
             </a>
-            <Link
-              href="/app"
-              className="text-sm font-medium text-[#F9FAFB] transition-opacity hover:opacity-80"
-            >
-              Sign in
-            </Link>
           </nav>
         </div>
       </header>
@@ -168,7 +162,10 @@ export default function HomePage() {
         {/* Hero */}
         <section className="mx-auto max-w-7xl px-4 pb-16 pt-14 sm:px-6 sm:pb-20 sm:pt-20 lg:px-8 lg:pb-24 lg:pt-24">
           <div className="mx-auto max-w-4xl text-center">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
+            <span className="inline-flex items-center rounded-full border border-white/[0.08] bg-[#121821]/80 px-3 py-1 text-[11px] font-medium text-[#9CA3AF] backdrop-blur-sm">
+              Launching Q4 2026 · Join the waitlist
+            </span>
+            <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
               Wallet-led payouts · UK &amp; international programs
             </p>
             <h1 className="mt-5 bg-gradient-to-b from-[#F9FAFB] via-[#F9FAFB] to-[#94a3b8] bg-clip-text text-[2rem] font-semibold leading-[1.12] tracking-tight text-transparent sm:text-5xl sm:leading-[1.08] lg:text-[3.25rem] lg:leading-[1.05]">
@@ -177,11 +174,12 @@ export default function HomePage() {
             <p className="mx-auto mt-7 max-w-2xl text-base leading-[1.7] text-[#9CA3AF] sm:text-lg sm:leading-relaxed">
               PolyPayd is the operating layer for batch money movement: fund a wallet, group recipients into
               batches, and let people claim into their own wallets, with balances and activity your finance team
-              can defend in a partner review.
+              can defend in a partner review. Funds are held by our licensed payment partners; PolyPayd provides
+              the operator and recipient experience on top of regulated rails.
             </p>
             <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:mt-11 sm:flex-row sm:justify-center sm:gap-4">
               <PrimaryCta id="early-access" href="#contact" className="w-full sm:w-auto sm:min-w-[200px]">
-                Request access
+                Join the waitlist
               </PrimaryCta>
             </div>
           </div>
@@ -578,7 +576,7 @@ export default function HomePage() {
                 </p>
                 <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
                   <PrimaryCta href="#contact" className="w-full sm:w-auto">
-                    Request access
+                    Join the waitlist
                   </PrimaryCta>
                 </div>
                 <p className="mx-auto mt-8 max-w-lg text-xs leading-relaxed text-[#6B7280]">
@@ -601,7 +599,7 @@ export default function HomePage() {
           <div className="max-w-md text-center sm:text-left">
             <p className="text-sm font-semibold text-[#F9FAFB]">PolyPayd</p>
             <p className="mt-2 text-xs leading-relaxed text-[#6B7280]">
-              Payout software for wallet-led bulk sends and recipient claims. © {new Date().getFullYear()} PolyPayd.
+              Payout orchestration for bulk sends and recipient claims, built on regulated UK payment rails. © {new Date().getFullYear()} PolyPayd.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-6 sm:justify-end sm:gap-8">
@@ -611,9 +609,6 @@ export default function HomePage() {
             <a href="#audit" className="text-xs font-medium text-[#9CA3AF] transition-colors hover:text-[#F9FAFB]">
               Audit &amp; activity
             </a>
-            <Link href="/app" className="text-xs font-medium text-[#9CA3AF] transition-colors hover:text-[#F9FAFB]">
-              App sign-in
-            </Link>
           </div>
         </div>
       </footer>

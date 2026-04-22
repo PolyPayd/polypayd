@@ -20,6 +20,22 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Environment variables
+
+### `ALLOWED_APP_EMAILS` (required for `/app` access)
+
+`middleware.ts` gates the founder-only prototype at `/app` (and every sub-route) to a comma-separated allowlist of Clerk account emails. Anyone signed out, or signed in with any other email, is redirected to `/coming-soon`.
+
+Set this in **Vercel → Project → Settings → Environment Variables** for each environment (Production, Preview, Development):
+
+```
+ALLOWED_APP_EMAILS=founder@example.com,other@example.com
+```
+
+Emails are matched case-insensitively and compared against the user's primary Clerk email. Leave the variable unset (or empty) to lock `/app` to nobody.
+
+The rest of the site (`/`, `/groups`, `/coming-soon`, `/sign-in`, `/api/waitlist`, Stripe webhook, etc.) remains fully public regardless of this variable.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
