@@ -1,56 +1,12 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
-import {
-  Send,
-  Users,
-  CheckCircle,
-  ChevronRight,
-  Plus,
-} from "lucide-react";
-
-import { requireUser } from "@/lib/users";
-import { createServerClient } from "@/lib/db/client";
-import type { BatchStatus, ClaimStatus } from "@/lib/db/types";
+import { Send, Users, CheckCircle, ChevronRight, Plus } from "lucide-react";
+import { requireUser } from "@/src/lib/users";
+import { createServerClient } from "@/src/lib/db/client";
+import type { BatchStatus, ClaimStatus } from "@/src/lib/db/types";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
-import { ClaimCodeInput } from "@/app/components/app/ClaimCodeInput";
-
-// ---------------------------------------------------------------------------
-// Status maps. Colours follow the spec:
-//   awaiting_funding=gray, open=blue, ready_to_approve=amber,
-//   processing=purple, completed=green, cancelled/refunded=red.
-// Other DB-only states fall back to sensible defaults.
-// ---------------------------------------------------------------------------
-
-const BATCH_STATUS_MAP: Record<
-  BatchStatus,
-  { variant: BadgeVariant; label: string }
-> = {
-  draft:               { variant: "gray",   label: "Draft" },
-  awaiting_funding:    { variant: "gray",   label: "Awaiting funding" },
-  open:                { variant: "blue",   label: "Open" },
-  ready_to_approve:    { variant: "amber",  label: "Ready to approve" },
-  approved:            { variant: "amber",  label: "Approved" },
-  processing:          { variant: "purple", label: "Processing" },
-  completed:           { variant: "green",  label: "Completed" },
-  partially_completed: { variant: "green",  label: "Partially completed" },
-  cancelled:           { variant: "red",    label: "Cancelled" },
-  refunded:            { variant: "red",    label: "Refunded" },
-  held:                { variant: "amber",  label: "Held" },
-};
-
-const CLAIM_STATUS_MAP: Record<
-  ClaimStatus,
-  { variant: BadgeVariant; label: string }
-> = {
-  slot_held:        { variant: "gray",   label: "Slot held" },
-  claimed:          { variant: "blue",   label: "Claimed" },
-  expired:          { variant: "red",    label: "Expired" },
-  payout_pending:   { variant: "purple", label: "Payout pending" },
-  payout_completed: { variant: "green",  label: "Paid out" },
-  payout_failed:    { variant: "red",    label: "Payout failed" },
-  cancelled:        { variant: "red",    label: "Cancelled" },
-};
+import { ClaimCodeInput } from "@/src/components/app/ClaimCodeInput";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -59,6 +15,40 @@ const CLAIM_STATUS_MAP: Record<
 function formatPence(pence: number): string {
   return `£${(pence / 100).toFixed(2)}`;
 }
+
+const BATCH_STATUS_MAP: Record<
+  BatchStatus,
+  { variant: BadgeVariant; label: string }
+> = {
+  draft:              { variant: "gray",   label: "Draft" },
+  awaiting_funding:   { variant: "gray",   label: "Awaiting funding" },
+  open:               { variant: "blue",   label: "Open" },
+  ready_to_approve:   { variant: "amber",  label: "Ready to approve" },
+  approved:           { variant: "amber",  label: "Approved" },
+  processing:         { variant: "purple", label: "Processing" },
+  completed:          { variant: "green",  label: "Completed" },
+  partially_completed:{ variant: "green",  label: "Partially completed" },
+  cancelled:          { variant: "red",    label: "Cancelled" },
+  refunded:           { variant: "red",    label: "Refunded" },
+  held:               { variant: "amber",  label: "Held" },
+};
+
+const CLAIM_STATUS_MAP: Record<
+  ClaimStatus,
+  { variant: BadgeVariant; label: string }
+> = {
+  slot_held:         { variant: "gray",   label: "Slot held" },
+  claimed:           { variant: "blue",   label: "Claimed" },
+  expired:           { variant: "red",    label: "Expired" },
+  payout_pending:    { variant: "purple", label: "Payout pending" },
+  payout_completed:  { variant: "green",  label: "Paid out" },
+  payout_failed:     { variant: "red",    label: "Payout failed" },
+  cancelled:         { variant: "red",    label: "Cancelled" },
+};
+
+// ---------------------------------------------------------------------------
+// Data types
+// ---------------------------------------------------------------------------
 
 type ActiveBatch = {
   id: string;
@@ -94,15 +84,16 @@ export default async function AppDashboardPage() {
   }
 
   const db = createServerClient();
+  const EXCLUDED_STATUSES = "(completed,cancelled,refunded)";
 
   const [activeBatchesResult, pendingClaimsResult] = await Promise.all([
     db
       .from("batches")
       .select("id, name, status, total_amount_pence, max_recipients, created_at")
       .eq("sender_user_id", user.id)
-      .not("status", "in", "(completed,cancelled,refunded)")
+      .not("status", "in", EXCLUDED_STATUSES)
       .order("created_at", { ascending: false })
-      .limit(5),
+      .limit(6),
 
     db
       .from("claims")
@@ -110,14 +101,13 @@ export default async function AppDashboardPage() {
       .eq("user_id", user.id)
       .eq("status", "claimed")
       .order("created_at", { ascending: false })
-      .limit(5),
+      .limit(6),
   ]);
 
   const activeBatches = (activeBatchesResult.data ?? []) as ActiveBatch[];
   const pendingClaims = (pendingClaimsResult.data ?? []) as PendingClaim[];
 
-  // Slot progress counts: how many recipients have actually claimed against
-  // each active batch (anything past slot_held counts as a claim landing).
+  // Fetch claim counts for slot progress bars
   let claimedPerBatch: Record<string, number> = {};
   if (activeBatches.length > 0) {
     const { data: claimCounts } = await db
@@ -168,13 +158,14 @@ export default async function AppDashboardPage() {
 function EmptyState() {
   return (
     <div className="flex flex-col gap-16">
+      {/* Hero */}
       <section className="flex flex-col items-start gap-5 pt-4">
         <h1 className="text-3xl font-bold tracking-tight text-fp-text sm:text-4xl">
           Ready to pay out to a group?
         </h1>
         <p className="max-w-lg text-base text-fp-text-secondary">
-          Create a batch, share a link, recipients claim their share. You
-          approve once, Faster Payments does the rest.
+          Create a batch, share a link, and your recipients claim their share.
+          You approve once — Faster Payments does the rest.
         </p>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <Link
@@ -186,11 +177,13 @@ function EmptyState() {
           </Link>
         </div>
 
-        <div className="mt-2 w-full">
+        {/* Claim code input */}
+        <div className="mt-2">
           <ClaimCodeInput />
         </div>
       </section>
 
+      {/* How it works */}
       <section>
         <h2 className="mb-6 text-lg font-semibold text-fp-text">
           How it works
@@ -206,7 +199,7 @@ function EmptyState() {
             step={2}
             icon={Users}
             title="Recipients claim"
-            description="Each person enters their bank details once. No account needed."
+            description="Each person enters their bank details once — no account needed."
           />
           <HowItWorksCard
             step={3}
@@ -259,13 +252,10 @@ function ActiveState({
   claimedPerBatch: Record<string, number>;
 }) {
   return (
-    <div className="flex flex-col gap-10 pt-2">
+    <div className="flex flex-col gap-10">
       {activeBatches.length > 0 && (
         <section>
-          <SectionHeader
-            title="Your active batches"
-            viewAllHref="/app/batches"
-          />
+          <SectionHeader title="Your active batches" viewAllHref="/app/batches" />
           <div className="flex flex-col gap-2">
             {activeBatches.map((batch) => (
               <BatchCard
@@ -280,10 +270,7 @@ function ActiveState({
 
       {pendingClaims.length > 0 && (
         <section>
-          <SectionHeader
-            title="Your pending claims"
-            viewAllHref="/app/claims"
-          />
+          <SectionHeader title="Your pending claims" viewAllHref="/app/claims" />
           <div className="flex flex-col gap-2">
             {pendingClaims.map((claim) => (
               <ClaimCard key={claim.id} claim={claim} />
@@ -337,13 +324,12 @@ function BatchCard({
       href={`/app/batches/${batch.id}`}
       className="group flex items-center justify-between rounded-xl border border-white/[0.06] bg-fp-surface px-5 py-4 transition-colors hover:border-white/10 hover:bg-fp-elevated"
     >
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-center gap-2.5">
-          <span className="truncate font-medium text-fp-text">
-            {batch.name}
-          </span>
+          <span className="truncate font-medium text-fp-text">{batch.name}</span>
           <Badge variant={variant}>{label}</Badge>
         </div>
+        {/* Slot progress */}
         <div className="flex items-center gap-2">
           <div className="h-1.5 w-28 overflow-hidden rounded-full bg-white/10">
             <div
@@ -361,7 +347,7 @@ function BatchCard({
         <span className="text-sm font-semibold text-fp-text">
           {formatPence(batch.total_amount_pence)}
         </span>
-        <ChevronRight className="h-4 w-4 text-fp-text-muted transition-colors group-hover:text-fp-text-secondary" />
+        <ChevronRight className="h-4 w-4 text-fp-text-muted group-hover:text-fp-text-secondary transition-colors" />
       </div>
     </Link>
   );
@@ -382,9 +368,7 @@ function ClaimCard({ claim }: { claim: PendingClaim }) {
     >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-center gap-2.5">
-          <span className="truncate font-medium text-fp-text">
-            {batchName}
-          </span>
+          <span className="truncate font-medium text-fp-text">{batchName}</span>
           <Badge variant={variant}>{label}</Badge>
         </div>
       </div>
@@ -393,7 +377,7 @@ function ClaimCard({ claim }: { claim: PendingClaim }) {
         <span className="text-sm font-semibold text-fp-text">
           {formatPence(claim.amount_pence)}
         </span>
-        <ChevronRight className="h-4 w-4 text-fp-text-muted transition-colors group-hover:text-fp-text-secondary" />
+        <ChevronRight className="h-4 w-4 text-fp-text-muted group-hover:text-fp-text-secondary transition-colors" />
       </div>
     </Link>
   );

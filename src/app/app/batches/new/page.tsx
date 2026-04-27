@@ -1,18 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import {
-  ArrowLeft,
-  Plus,
-  X,
-  Loader2,
-  AlertTriangle,
-} from "lucide-react";
-
+import { ArrowLeft, Plus, X, Loader2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import {
   Dialog,
@@ -21,20 +14,17 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { calculateFeeBreakdown } from "@/lib/fees";
+import { calculateFee } from "@/src/lib/fees";
+import type { KycStatus } from "@/src/lib/db/types";
 
 // ---------------------------------------------------------------------------
-// Storage + currency helpers
+// Constants & helpers
 // ---------------------------------------------------------------------------
 
 const STORAGE_KEY = "polypay_batch_draft";
 
-// All money is integer pence on the wire. The form keeps GBP-as-string for
-// natural input; we convert at the boundary.
 function pence(gbp: string): number {
-  const n = parseFloat(gbp || "0");
-  if (!isFinite(n) || isNaN(n)) return 0;
-  return Math.round(n * 100);
+  return Math.round(parseFloat(gbp || "0") * 100);
 }
 
 function formatGbp(p: number): string {
@@ -42,10 +32,8 @@ function formatGbp(p: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Draft shape persisted to sessionStorage
+// Types
 // ---------------------------------------------------------------------------
-
-type Recipient = { label: string; amount_gbp: string };
 
 type BatchDraft = {
   name: string;
@@ -54,7 +42,7 @@ type BatchDraft = {
   closing_mode: "close_when_full" | "manual_close";
   total_amount_gbp: string;
   max_recipients: string;
-  recipients: Recipient[];
+  recipients: { label: string; amount_gbp: string }[];
 };
 
 const DEFAULT_DRAFT: BatchDraft = {
@@ -68,39 +56,29 @@ const DEFAULT_DRAFT: BatchDraft = {
 };
 
 // ---------------------------------------------------------------------------
-// Zod schemas (one per step)
+// Zod schemas
 // ---------------------------------------------------------------------------
 
 const step1Schema = z.object({
   name: z.string().min(1, "Required").max(80, "Max 80 characters"),
-  description: z
-    .string()
-    .max(300, "Max 300 characters")
-    .optional()
-    .or(z.literal("")),
+  description: z.string().max(300, "Max 300 characters").optional(),
   mode: z.enum(["equal_shares", "custom_amounts"]),
   closing_mode: z.enum(["close_when_full", "manual_close"]),
 });
 
-// Form fields produce strings (HTML <input type="number" /> always yields a
-// string via RHF's `register`). We validate and refine as string here, then
-// parse to int in the submit handler. Keeping input == output for the
-// schema avoids RHF / zodResolver type-resolution headaches.
 const equalSharesSchema = z.object({
   total_amount_gbp: z
     .string()
     .min(1, "Required")
     .refine((v) => {
       const n = parseFloat(v);
-      return !isNaN(n) && n >= 0.01 && n <= 10_000;
+      return !isNaN(n) && n >= 0.01 && n <= 10000;
     }, "Must be between £0.01 and £10,000"),
   max_recipients: z
-    .string()
-    .min(1, "Required")
-    .refine((v) => {
-      const n = Number(v);
-      return Number.isInteger(n) && n >= 2 && n <= 100;
-    }, "Must be a whole number between 2 and 100"),
+    .number({ error: "Required" })
+    .int()
+    .min(2, "Minimum 2 recipients")
+    .max(100, "Maximum 100 recipients"),
 });
 
 const customAmountsSchema = z.object({
@@ -124,14 +102,6 @@ const customAmountsSchema = z.object({
 type Step1Values = z.infer<typeof step1Schema>;
 type EqualSharesValues = z.infer<typeof equalSharesSchema>;
 type CustomAmountsValues = z.infer<typeof customAmountsSchema>;
-
-// KYC status comes from /api/app/me. The DB enum is the source of truth;
-// we mirror it loosely here to keep the page decoupled from server types.
-type KycStatusLite = string;
-
-// kyc_status values that satisfy the gate. We accept both 'verified' (DB
-// schema today) and 'approved' (kept for forwards-compat with the spec).
-const KYC_OK_VALUES = new Set<string>(["verified", "approved"]);
 
 // ---------------------------------------------------------------------------
 // Step indicator
@@ -175,7 +145,7 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 }
 
 // ---------------------------------------------------------------------------
-// Reusable bits
+// Segmented toggle
 // ---------------------------------------------------------------------------
 
 function SegmentedToggle<T extends string>({
@@ -208,6 +178,10 @@ function SegmentedToggle<T extends string>({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Form field wrapper
+// ---------------------------------------------------------------------------
+
 function Field({
   label,
   error,
@@ -216,7 +190,7 @@ function Field({
 }: {
   label: string;
   error?: string;
-  children: ReactNode;
+  children: React.ReactNode;
   hint?: string;
 }) {
   return (
@@ -268,7 +242,6 @@ function TextArea({
 function PrimaryButton({
   children,
   loading,
-  className,
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { loading?: boolean }) {
   return (
@@ -278,7 +251,7 @@ function PrimaryButton({
       className={cn(
         "inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-fp-accent px-6 text-sm font-semibold text-white",
         "transition-colors hover:bg-fp-accent/90 disabled:cursor-not-allowed disabled:opacity-50",
-        className
+        props.className
       )}
     >
       {loading && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -289,7 +262,6 @@ function PrimaryButton({
 
 function GhostButton({
   children,
-  className,
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
@@ -297,8 +269,8 @@ function GhostButton({
       {...props}
       className={cn(
         "inline-flex h-11 items-center gap-2 rounded-lg px-4 text-sm font-medium text-fp-text-secondary",
-        "transition-colors hover:bg-white/5 hover:text-fp-text disabled:cursor-not-allowed disabled:opacity-50",
-        className
+        "transition-colors hover:bg-white/5 hover:text-fp-text",
+        props.className
       )}
     >
       {children}
@@ -330,10 +302,10 @@ function KycModal({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Persona placeholder */}
         <div className="rounded-lg border border-white/10 p-4 text-sm text-fp-text-secondary">
           Persona KYC widget — placeholder until credentials are configured.{" "}
           <button
-            type="button"
             onClick={onSimulateSuccess}
             className="underline text-fp-accent hover:text-fp-accent/80"
           >
@@ -392,7 +364,7 @@ function Step1({
       <Field
         label="Description"
         error={errors.description?.message}
-        hint="Optional. Visible to you only."
+        hint="Optional — visible to you only"
       >
         <TextArea
           {...register("description")}
@@ -409,7 +381,7 @@ function Step1({
             { label: "Custom amounts", value: "custom_amounts" },
           ]}
           value={mode}
-          onChange={(v) => setValue("mode", v, { shouldDirty: true })}
+          onChange={(v) => setValue("mode", v)}
         />
       </Field>
 
@@ -420,7 +392,7 @@ function Step1({
             { label: "I'll close manually", value: "manual_close" },
           ]}
           value={closingMode}
-          onChange={(v) => setValue("closing_mode", v, { shouldDirty: true })}
+          onChange={(v) => setValue("closing_mode", v)}
         />
       </Field>
 
@@ -460,7 +432,7 @@ function Step2Equal({
   const totalGbp = watch("total_amount_gbp");
   const maxR = watch("max_recipients");
 
-  const totalPence = pence(String(totalGbp ?? ""));
+  const totalPence = pence(String(totalGbp));
   const count = Number(maxR) || 0;
   const perRecipient = count > 0 ? Math.floor(totalPence / count) : 0;
   const remainder = count > 0 ? totalPence - perRecipient * count : 0;
@@ -507,7 +479,7 @@ function Step2Equal({
         hint="Between 2 and 100"
       >
         <TextInput
-          {...register("max_recipients")}
+          {...register("max_recipients", { valueAsNumber: true })}
           type="number"
           min={2}
           max={100}
@@ -515,6 +487,7 @@ function Step2Equal({
         />
       </Field>
 
+      {/* Live per-recipient preview */}
       {perRecipient > 0 && (
         <div className="rounded-lg border border-white/10 bg-fp-elevated p-4">
           <p className="text-sm font-medium text-fp-text">
@@ -570,19 +543,14 @@ function Step2Custom({
   });
 
   const recipients = watch("recipients");
-  const total = (recipients ?? []).reduce(
-    (sum, r) => sum + pence(r.amount_gbp),
-    0
-  );
+  const total = recipients.reduce((sum, r) => sum + pence(r.amount_gbp), 0);
 
   const tooMany = fields.length > 50;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-fp-text">
-          Set recipient amounts
-        </h1>
+        <h1 className="text-2xl font-bold text-fp-text">Set recipient amounts</h1>
         <p className="mt-1 text-sm text-fp-text-secondary">
           Add each recipient and their individual amount.
         </p>
@@ -594,6 +562,7 @@ function Step2Custom({
         </p>
       )}
 
+      {/* Table header */}
       <div className="grid grid-cols-[1fr_120px_40px] gap-2 pb-1">
         <span className="text-xs font-medium text-fp-text-muted">
           Recipient label
@@ -613,7 +582,7 @@ function Step2Custom({
             <div>
               <TextInput
                 {...register(`recipients.${i}.label`)}
-                placeholder="e.g. Amara"
+                placeholder="e.g. Alice"
               />
               {errors.recipients?.[i]?.label && (
                 <p className="mt-1 text-xs text-red-400">
@@ -645,7 +614,6 @@ function Step2Custom({
               type="button"
               onClick={() => fields.length > 1 && remove(i)}
               disabled={fields.length === 1}
-              aria-label={`Remove recipient ${i + 1}`}
               className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-lg text-fp-text-muted transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-30"
             >
               <X className="h-4 w-4" />
@@ -663,6 +631,7 @@ function Step2Custom({
         <Plus className="h-4 w-4" /> Add recipient
       </button>
 
+      {/* Running total */}
       <div className="flex items-center justify-between rounded-lg border border-white/10 bg-fp-elevated px-4 py-3">
         <span className="text-sm text-fp-text-secondary">Total</span>
         <span className="font-semibold text-fp-text">{formatGbp(total)}</span>
@@ -682,9 +651,18 @@ function Step2Custom({
 // Step 3 — Review
 // ---------------------------------------------------------------------------
 
+function feeComponents(totalPence: number, recipientCount: number) {
+  const flat = 100;
+  const percent = Math.floor(totalPence / 100);
+  const perRecip = 30 * recipientCount;
+  const subtotal = flat + percent + perRecip;
+  const total = Math.max(subtotal, 200);
+  return { flat, percent, perRecip, total };
+}
+
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between border-b border-white/[0.06] py-2.5 last:border-0">
+    <div className="flex items-center justify-between py-2.5 border-b border-white/[0.06] last:border-0">
       <span className="text-sm text-fp-text-secondary">{label}</span>
       <span className="text-sm font-medium text-fp-text">{value}</span>
     </div>
@@ -696,13 +674,11 @@ function Step3Review({
   onBack,
   onSubmit,
   submitting,
-  submitError,
 }: {
   draft: BatchDraft;
   onBack: () => void;
   onSubmit: () => Promise<void>;
   submitting: boolean;
-  submitError: string | null;
 }) {
   const isCustom = draft.mode === "custom_amounts";
   const totalPence = isCustom
@@ -712,8 +688,8 @@ function Step3Review({
     ? draft.recipients.length
     : Number(draft.max_recipients) || 0;
 
-  const fee = calculateFeeBreakdown(totalPence, recipientCount);
-  const totalCharge = totalPence + fee.totalPence;
+  const fee = feeComponents(totalPence, recipientCount);
+  const totalCharge = totalPence + fee.total;
 
   return (
     <div className="flex flex-col gap-6">
@@ -724,6 +700,7 @@ function Step3Review({
         </p>
       </div>
 
+      {/* Batch details */}
       <div className="rounded-xl border border-white/[0.06] bg-fp-surface px-5">
         <ReviewRow label="Batch name" value={draft.name} />
         {draft.description && (
@@ -731,9 +708,7 @@ function Step3Review({
         )}
         <ReviewRow
           label="Mode"
-          value={
-            draft.mode === "equal_shares" ? "Equal shares" : "Custom amounts"
-          }
+          value={draft.mode === "equal_shares" ? "Equal shares" : "Custom amounts"}
         />
         <ReviewRow
           label="Closing"
@@ -750,37 +725,33 @@ function Step3Review({
         <ReviewRow label="Total amount" value={formatGbp(totalPence)} />
       </div>
 
+      {/* Fee breakdown */}
       <div>
         <p className="mb-2 text-sm font-medium text-fp-text">Fee breakdown</p>
         <div className="rounded-xl border border-white/[0.06] bg-fp-surface px-5">
-          <ReviewRow label="Flat fee" value={formatGbp(fee.flatPence)} />
+          <ReviewRow label="Flat fee" value={formatGbp(fee.flat)} />
           <ReviewRow
             label={`1% of ${formatGbp(totalPence)}`}
-            value={formatGbp(fee.percentPence)}
+            value={formatGbp(fee.percent)}
           />
           <ReviewRow
             label={`£0.30 × ${recipientCount} recipients`}
-            value={formatGbp(fee.perRecipientPence)}
+            value={formatGbp(fee.perRecip)}
           />
           <ReviewRow
             label="Total fee (min £2.00)"
-            value={formatGbp(fee.totalPence)}
+            value={formatGbp(fee.total)}
           />
         </div>
       </div>
 
+      {/* Total charge */}
       <div className="flex items-center justify-between rounded-xl border border-fp-accent/30 bg-fp-accent/10 px-5 py-4">
         <span className="font-semibold text-fp-text">Total to fund</span>
         <span className="text-lg font-bold text-fp-accent">
           {formatGbp(totalCharge)}
         </span>
       </div>
-
-      {submitError && (
-        <p className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
-          {submitError}
-        </p>
-      )}
 
       <div className="flex gap-3 pt-2">
         <GhostButton type="button" onClick={onBack} disabled={submitting}>
@@ -802,65 +773,43 @@ export default function NewBatchPage() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [draft, setDraft] = useState<BatchDraft>(DEFAULT_DRAFT);
-  const [kycStatus, setKycStatus] = useState<KycStatusLite>("none");
+  const [kycStatus, setKycStatus] = useState<KycStatus>("none");
   const [showKycModal, setShowKycModal] = useState(false);
   const [pendingStep1, setPendingStep1] = useState<Step1Values | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Hydrate draft from sessionStorage on mount.
+  // Load draft from sessionStorage on mount
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as Partial<BatchDraft>;
-        setDraft({ ...DEFAULT_DRAFT, ...parsed });
-      }
-    } catch {
-      // Corrupt JSON in sessionStorage shouldn't crash the page.
-    }
+      if (saved) setDraft(JSON.parse(saved) as BatchDraft);
+    } catch {}
   }, []);
 
-  // Fetch kyc_status. Tolerate either { user: { kyc_status } } or a flat
-  // shape so the page survives small API-shape changes.
+  // Fetch current user KYC status
   useEffect(() => {
-    let cancelled = false;
     fetch("/api/app/me")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: unknown) => {
-        if (cancelled || !data || typeof data !== "object") return;
-        const root = data as Record<string, unknown>;
-        const userObj =
-          (root.user as Record<string, unknown> | undefined) ?? root;
-        const status = userObj?.kyc_status;
-        if (typeof status === "string") setKycStatus(status);
+      .then((r) => r.json())
+      .then((data: { user?: { kyc_status: KycStatus } }) => {
+        if (data.user?.kyc_status) setKycStatus(data.user.kyc_status);
       })
-      .catch(() => {
-        // Fall back to "none" — the modal will appear on continue.
-      });
-    return () => {
-      cancelled = true;
-    };
+      .catch(() => {});
   }, []);
 
+  // Persist draft to sessionStorage whenever it changes
   const saveDraft = useCallback((d: BatchDraft) => {
     setDraft(d);
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(d));
-    } catch {
-      // Quota exceeded or sessionStorage unavailable — fail silently.
-    }
+    } catch {}
   }, []);
 
+  // Step 1 → KYC gate → Step 2
   function handleStep1Submit(data: Step1Values) {
-    const updated: BatchDraft = {
-      ...draft,
-      ...data,
-      description: data.description ?? "",
-    };
+    const updated = { ...draft, ...data };
     saveDraft(updated);
 
-    if (!KYC_OK_VALUES.has(kycStatus)) {
+    if (kycStatus !== "verified") {
       setPendingStep1(data);
       setShowKycModal(true);
     } else {
@@ -872,32 +821,30 @@ export default function NewBatchPage() {
     setKycStatus("verified");
     setShowKycModal(false);
     if (pendingStep1) {
-      saveDraft({
-        ...draft,
-        ...pendingStep1,
-        description: pendingStep1.description ?? "",
-      });
+      saveDraft({ ...draft, ...pendingStep1 });
       setPendingStep1(null);
     }
     setStep(2);
   }
 
+  // Step 2 equal shares
   function handleEqualSharesSubmit(data: EqualSharesValues) {
     saveDraft({
       ...draft,
-      total_amount_gbp: data.total_amount_gbp,
-      max_recipients: data.max_recipients,
+      total_amount_gbp: String(data.total_amount_gbp),
+      max_recipients:   String(data.max_recipients),
     });
     setStep(3);
   }
 
+  // Step 2 custom amounts
   function handleCustomAmountsSubmit(data: CustomAmountsValues) {
     saveDraft({ ...draft, recipients: data.recipients });
     setStep(3);
   }
 
+  // Step 3 → API → redirect
   async function handleSubmit() {
-    setSubmitError(null);
     setSubmitting(true);
     try {
       const isCustom = draft.mode === "custom_amounts";
@@ -909,15 +856,15 @@ export default function NewBatchPage() {
         : Number(draft.max_recipients);
 
       const body = {
-        name: draft.name,
-        description: draft.description || undefined,
-        mode: draft.mode,
-        closing_mode: draft.closing_mode,
-        total_pence: totalPence,
+        name:           draft.name,
+        description:    draft.description || undefined,
+        mode:           draft.mode,
+        closing_mode:   draft.closing_mode,
+        total_pence:    totalPence,
         max_recipients: maxRecipients,
         ...(isCustom && {
           recipients: draft.recipients.map((r) => ({
-            label: r.label,
+            label:        r.label,
             amount_pence: pence(r.amount_gbp),
           })),
         }),
@@ -930,53 +877,43 @@ export default function NewBatchPage() {
       });
 
       if (!res.ok) {
-        const err = (await res.json().catch(() => ({}))) as {
-          error?: string;
-          message?: string;
-        };
-        throw new Error(err.message ?? err.error ?? "Failed to create batch");
+        const err = (await res.json()) as { error?: string };
+        throw new Error(err.error ?? "Failed to create batch");
       }
 
       const { batchId } = (await res.json()) as { batchId: string };
 
+      // Clear draft on success
       try {
         sessionStorage.removeItem(STORAGE_KEY);
-      } catch {
-        // ignore
-      }
+      } catch {}
 
       router.push(`/app/batches/${batchId}`);
     } catch (err) {
       console.error("[new-batch] submit failed:", err);
-      setSubmitError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again."
-      );
       setSubmitting(false);
     }
   }
 
   const step1Defaults: Step1Values = {
-    name: draft.name,
-    description: draft.description,
-    mode: draft.mode,
+    name:         draft.name,
+    description:  draft.description,
+    mode:         draft.mode,
     closing_mode: draft.closing_mode,
   };
 
   const equalDefaults: EqualSharesValues = {
     total_amount_gbp: draft.total_amount_gbp,
-    max_recipients: draft.max_recipients,
+    max_recipients:   Number(draft.max_recipients) || (2 as unknown as number),
   };
 
   const customDefaults: CustomAmountsValues = {
-    recipients: draft.recipients.length
-      ? draft.recipients
-      : [{ label: "", amount_gbp: "" }],
+    recipients: draft.recipients.length ? draft.recipients : [{ label: "", amount_gbp: "" }],
   };
 
   return (
     <>
+      {/* Full-screen funding overlay */}
       {submitting && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-fp-bg/90 backdrop-blur-sm">
           <Loader2 className="h-8 w-8 animate-spin text-fp-accent" />
@@ -1019,7 +956,6 @@ export default function NewBatchPage() {
             onBack={() => setStep(2)}
             onSubmit={handleSubmit}
             submitting={submitting}
-            submitError={submitError}
           />
         )}
       </div>

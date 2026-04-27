@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 
 import { ensureUserRow, getUserByClerkId } from "@/lib/users";
+import { AppSidebar } from "@/app/components/app/AppSidebar";
 
 // Gated subtree for the authenticated app. Protects every route except
 // `/app/onboarding` (which lives outside this route group).
@@ -55,11 +56,9 @@ export default async function AppAuthedLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      <aside className="hidden w-60 shrink-0 border-r border-border bg-card md:block">
-        {/* TODO: app sidebar nav (dashboard, batches, claims, settings, help) */}
-      </aside>
-      <main className="flex-1">{children}</main>
+    <div className="flex min-h-screen flex-col bg-fp-bg text-fp-text md:flex-row">
+      <AppSidebar />
+      <main className="min-w-0 flex-1">{children}</main>
     </div>
   );
 }

@@ -6,6 +6,16 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 //
 // All reads filter for `deleted_at IS NULL` so soft-deleted accounts can never
 // leak back into the live app.
+//
+// Re-exports KycStatus (and other DB enums) so callers don't need to know
+// whether to import from here or @/lib/db/types.
+export type {
+  KycStatus,
+  BatchStatus,
+  BatchMode,
+  BatchClosingMode,
+  ClaimStatus,
+} from "@/lib/db/types";
 
 export type UserRow = {
   id: string;
@@ -64,6 +74,19 @@ export async function updateUserByClerkId(
     return null;
   }
   return (data as UserRow | null) ?? null;
+}
+
+// Throws if the user row is missing — for callers that have already verified
+// the Clerk session and just need a guaranteed user. Pair with a try/catch +
+// redirect("/signin") at the call site (e.g. server components, route
+// handlers) to handle the rare race where Clerk reports a session but the
+// users row hasn't been provisioned yet.
+export async function requireUser(clerkId: string): Promise<UserRow> {
+  const user = await getUserByClerkId(clerkId);
+  if (!user) {
+    throw new Error(`User not found for clerk_id: ${clerkId}`);
+  }
+  return user;
 }
 
 // Defensive insert: if the Clerk webhook hasn't created the users row yet
