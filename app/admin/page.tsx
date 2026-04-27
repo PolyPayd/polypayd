@@ -1,7 +1,7 @@
-export default function NewBatchPage() {
+export default function AdminPage() {
   return (
     <main>
-      <h1>NewBatchPage</h1>
+      <h1>AdminPage</h1>
       {/* TODO: implement */}
     </main>
   );

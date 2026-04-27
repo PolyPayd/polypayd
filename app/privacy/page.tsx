@@ -1,7 +1,7 @@
-export default function NewBatchPage() {
+export default function PrivacyPage() {
   return (
     <main>
-      <h1>NewBatchPage</h1>
+      <h1>PrivacyPage</h1>
       {/* TODO: implement */}
     </main>
   );

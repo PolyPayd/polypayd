@@ -1,7 +1,7 @@
-export default function NewBatchPage() {
+export default function ClaimsPage() {
   return (
     <main>
-      <h1>NewBatchPage</h1>
+      <h1>ClaimsPage</h1>
       {/* TODO: implement */}
     </main>
   );

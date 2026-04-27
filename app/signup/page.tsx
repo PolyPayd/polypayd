@@ -1,7 +1,7 @@
-export default function NewBatchPage() {
+export default function SignupPage() {
   return (
     <main>
-      <h1>NewBatchPage</h1>
+      <h1>SignupPage</h1>
       {/* TODO: implement */}
     </main>
   );
