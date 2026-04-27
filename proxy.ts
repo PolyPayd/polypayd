@@ -1,32 +1,71 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+// Required env vars:
+//   ADMIN_EMAILS — comma-separated list of emails allowed to access /admin/*
+//                  e.g. "alice@example.com,bob@example.com"
 
-// Path matchers for the protected segments.
-// Everything that does NOT match these stays public by default.
-const isAppRoute = createRouteMatcher(["/app", "/app/(.*)"]);
-const isAdminRoute = createRouteMatcher(["/admin", "/admin/(.*)"]);
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 
-// Comma-separated list of emails allowed to reach /admin/*.
-// Set via Vercel env var: ALLOWED_ADMIN_EMAILS="you@example.com,other@example.com"
-// TODO: wire this into the /admin gate below once the Clerk auth implementation lands.
-// const ALLOWED_ADMIN_EMAILS = (process.env.ALLOWED_ADMIN_EMAILS ?? "")
-//   .split(",")
-//   .map((e) => e.trim().toLowerCase())
-//   .filter(Boolean);
+const isPublicRoute = createRouteMatcher([
+  '/',
+  '/platforms',
+  '/coming-soon',
+  '/signup',
+  '/signin',
+  '/forgot-password',
+  '/claim',
+  '/claim/(.*)',
+  '/privacy',
+  '/terms',
+  '/api/public/(.*)',
+  '/api/webhooks/(.*)',
+]);
+
+const isAppRoute   = createRouteMatcher(['/app/(.*)', '/api/app/(.*)']);
+const isAdminRoute = createRouteMatcher(['/admin/(.*)']);
+
+const adminEmails = (): Set<string> =>
+  new Set(
+    (process.env.ADMIN_EMAILS ?? '')
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean)
+  );
 
 export default clerkMiddleware(async (auth, req) => {
-  // /admin/* — must be a Clerk-authenticated session whose email is on the
-  // ALLOWED_ADMIN_EMAILS allowlist.
-  // TODO: implement Clerk auth + email allowlist check here.
-  // For now we require any signed-in session as a safe baseline.
+  // Public routes — no auth required.
+  if (isPublicRoute(req)) return;
+
   if (isAdminRoute(req)) {
-    await auth.protect();
+    const session = await auth();
+
+    // Not signed in → redirect to /signin.
+    if (!session.userId) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/signin';
+      return NextResponse.redirect(url);
+    }
+
+    // Signed in but not on the admin allowlist → 403.
+    // email is a custom claim — cast through unknown since JwtPayload doesn't
+    // include it in its base type (add it via a Clerk session token template).
+    const claims = session.sessionClaims as Record<string, unknown> | null;
+    const email  = typeof claims?.email === 'string' ? claims.email : undefined;
+    if (!email || !adminEmails().has(email.toLowerCase())) {
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+
     return;
   }
 
-  // /app/* — must be a Clerk-authenticated session (any signed-in user).
-  // TODO: refine post-auth UX (e.g. redirect to /signin instead of Clerk default).
   if (isAppRoute(req)) {
-    await auth.protect();
+    const session = await auth();
+
+    if (!session.userId) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/signin';
+      return NextResponse.redirect(url);
+    }
+
     return;
   }
 
@@ -34,5 +73,5 @@ export default clerkMiddleware(async (auth, req) => {
 });
 
 export const config = {
-  matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
+  matcher: ['/((?!.*\\..*|_next).*)', '/', '/(api|trpc)(.*)'],
 };
